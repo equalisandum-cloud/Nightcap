@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Last Nightcap: plenary dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E6EBEE;--paper:#FFF;--ink:#17202A;--muted:#55606B;--line:#C4CDD4;--abd:#6A4B9D;--ded:#1B6A64;--ind:#985709;--tag:#F2CF5B;
+  --ui:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;--type:"Special Elite","Courier New",monospace;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#131920;--paper:#1D252E;--ink:#E4E9EE;--muted:#9BA7B3;--line:#34414E;--abd:#B7A0DF;--ded:#6FC4BB;--ind:#E3A64C;--tag:#C9A83A}}
+:root[data-theme="dark"]{--bg:#131920;--paper:#1D252E;--ink:#E4E9EE;--muted:#9BA7B3;--line:#34414E;--abd:#B7A0DF;--ded:#6FC4BB;--ind:#E3A64C;--tag:#C9A83A}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 var(--ui)}
+main{max-width:1200px;margin:auto;padding:20px 16px}
+h1{font-family:var(--type);font-weight:400;font-size:clamp(1.8rem,4vw,2.6rem);margin:0 0 .2em}
+h2{font-size:1.3rem;margin:0 0 .6em} h3{font-size:1.05rem;margin:1em 0 .4em}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px;margin-top:16px}
+.muted{color:var(--muted)} .small{font-size:.88rem}
+.btn{font:inherit;border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:.4em .9em;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper)}
+input,textarea{font:inherit;color:inherit;width:100%;padding:.5em;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.bar{display:grid;grid-template-columns:9em 1fr 2.5em;gap:8px;align-items:center;margin:6px 0}
+.bar .fill{height:22px;background:var(--ink);border-radius:3px}
+.stat{font-size:2rem;font-weight:700;line-height:1}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.team{cursor:pointer} tr.team:hover{background:var(--bg)}
+.answers{list-style:none;padding:0;margin:0}
+.answers li{padding:8px 0;border-top:1px solid var(--line)}
+.answers b{display:inline-block;min-width:7em}
+.k-hyp{color:var(--abd);font-weight:700}.k-pred{color:var(--ded);font-weight:700}.k-test{color:var(--ind);font-weight:700}
+.entry{border-left:4px solid var(--line);padding:4px 10px;margin:6px 0;white-space:pre-line}
+ol.plan li{margin-bottom:.7em}
+.entry.hyp{border-color:var(--abd)}.entry.pred{border-color:var(--ded)}.entry.test{border-color:var(--ind)}
+.solution{font-family:var(--type);white-space:pre-wrap;line-height:1.6}
+:focus-visible{outline:3px solid var(--abd);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1>The Last Nightcap</h1>
+  <p class="muted">Plenary dashboard. Load the teams' submissions, then work through the results by type of reasoning.</p>
+
+  <section class="panel">
+    <h2>Load submissions</h2>
+    <div class="grid">
+      <div><h3>Files from teams</h3><input type="file" id="files" accept=".json,application/json" multiple></div>
+      <div><h3>Google Sheet (published as CSV)</h3><div class="row"><input type="text" id="csv" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"><button class="btn" id="csvbtn">Load</button></div></div>
+      <div><h3>Pasted text</h3><textarea id="paste" rows="3" placeholder="Paste one or more submissions"></textarea><button class="btn" id="pastebtn" style="margin-top:6px">Add</button></div>
+    </div>
+    <p class="small" id="msg"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Plenary plan (30 minutes)</h2>
+    <p class="small muted">Work by type of reasoning, not by suspect, and keep the answer back until step 5. Ask students throughout to name their moves: was it a guess at an explanation, a consequence of one, or a pattern generalised from?</p>
+    <ol class="plan">
+      <li><b>Verdicts, without the answer (3 min).</b> Show the verdicts and confidence below. Say nothing about who was right. Note whether confidence differs between verdicts.</li>
+      <li><span class="k-hyp">Abduction (7 min).</span> Show the surprising fact. Collect first hypotheses from two or three teams. What made them attractive? Did they name a mechanism, or only a motive? Find an example of a rescue (an accomplice, an affair) and ask what evidence the addition needed. Use the answers to "More than one explanation".</li>
+      <li><span class="k-pred">Deduction (7 min).</span> Take one hypothesis and derive predictions together on the board ("if H, then..."). Then Marianne's clean glass: what follows strictly (after she poured, not after she left), and which premises does that rest on? Use "Valid is not the same as sound". Point to the teams that made predictions telling hypotheses apart.</li>
+      <li><span class="k-test">Induction and the planted card (6 min).</span> How much can 30 nights of routine support a claim about one night? Where did teams rely on a pattern without noticing? Then the planted card as a smoking gun that could be planted: contrast a team that took it as confirmation with one that asked what else would have to be true.</li>
+      <li><b>Reveal as best explanation (3 min).</b> Present Jonas as the explanation that accounts for most evidence with the fewest additions, and say what remains unproven. If a team argued well for someone else and stated its uncertainty honestly, show it and explain why it scores well.</li>
+      <li><b>Transfer (4 min).</b> Map the cycle onto their projects: puzzle, mechanism, observable implications, what their data can be generalised to. Each student writes one sentence: "If my explanation is right, I should find ___ in my data." Collect a few aloud.</li>
+    </ol>
+  </section>
+
+  <div id="out"></div>
+
+  <section class="panel">
+    <div class="row"><h2 style="margin:0;margin-right:auto">Solution and teaching notes</h2><button class="btn" id="reveal">Show</button></div>
+    <div id="sol" hidden>
+<div class="solution">Jonas Brink poisoned the decanter at about 22:48 with tablets he took from Viktor's prescription when he collected it on 14 September.
+
+Motive. Viktor's unsent email (E10) announces a review of grant reporting and says Jonas had not produced the partner statements requested on 8 September, so Jonas had reason to fear exposure well before the 14th. Selma reports he had "found out where the money went" (interview). Jonas cancelled a meeting with the external auditor (E9).
+Means. Forty tablets are missing (E5), enough for the lethal concentration in the small decanter (E1). Jonas collected the prescription (E9, and he admits it).
+Opportunity. The spare card opened the study at 22:48 (E4) while Viktor was on the terrace with Selma (interview, E11). Apart from one entry on Thursday at 14:12, the spare card had not been used since May (E8). Peter believes Viktor gave it to Jonas on Thursday for the folders (interview, unobserved), which the Thursday entry fits. Jonas's remark that "Viktor kept it himself" suggests he knew Viktor had taken it from the estate office. The bartender puts Jonas out of the bar from about 22:45 to just before 23:00 (E6).
+Planting. The only person at the coats after 22:50 was Jonas, at 22:55 (E13). His scarf story is weak.
+
+Why not Marianne. Her 22:34 entry fits a routine seen on 26 of 30 nights (E8). She has her own card and no need for the spare. But note: her clean glass (E3) only shows the decanter was safe when she poured, not when she left. She could still have poisoned it. The 22:48 entry and the planted card are what count against that.
+Why not Peter. His false log entry (E7) is explained by the cognac swap. He entered at 22:31, before Marianne poured a clean glass.
+Why not Selma. She was with Viktor on the terrace from about 22:40 to 23:00 and has no card for the study.
+
+What remains uncertain. Nobody saw Jonas enter the study. The card handover is Peter's belief. The case is an inference to the best explanation, not a proof.</div>
+      <h3>Discussion prompts</h3>
+      <p><span class="k-hyp">Abduction.</span> Which explanation did you reach for first, and why was it attractive? What made you give it up, or keep it?</p>
+      <p><span class="k-pred">Deduction.</span> What exactly follows from Marianne's clean glass? Which premises did the conclusion depend on?</p>
+      <p><span class="k-test">Induction.</span> How much weight can 30 nights of logs carry? When would a routine be a poor guide to one night?</p>
+      <p>The planted card. Which teams changed their minds when it appeared, and which asked what else would have to be true?</p>
+      <p>Your own project. What is your surprising fact? What would follow if your explanation holds? Which data could show you are wrong?</p>
+      <h3>Assessment rubric (0 to 2 points each)</h3>
+      <p>1. The explanation accounts for the surprising fact. 2. Predictions follow from the explanation and could have failed. 3. Evidence is tested against predictions, and the limits of inductive steps are acknowledged. 4. At least one rival explanation is considered, with evidence that discriminates between them. 5. Uncertainty is stated honestly and confidence matches the evidence. Naming the right person earns no points by itself.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const BRIDGE_TITLES = { BC_ABDUCT:"More than one explanation (abduction)", BC_VALID:"Valid is not the same as sound (deduction)", BC_INDUCT:"Thirty nights, one pattern (induction)", BC_CONFIRM:"Evidence that fits too well (the planted card)" };
+let subs = [];
+
+function add(list){
+  let n = 0;
+  for (const s of list){
+    if (!s || s.game !== "nightcap" || !s.team) continue;
+    const i = subs.findIndex(x => x.team === s.team);
+    if (i >= 0) subs[i] = s; else subs.push(s);
+    n++;
+  }
+  document.getElementById("msg").textContent = `${n} submission${n===1?"":"s"} added. ${subs.length} team${subs.length===1?"":"s"} in total.`;
+  show();
+}
+function fromText(t){
+  const out = [];
+  try { const j = JSON.parse(t); (Array.isArray(j) ? j : [j]).forEach(x => out.push(x)); return out; } catch(e){}
+  const re = /\{"game":"nightcap"/g; let m;
+  const starts = []; while ((m = re.exec(t))) starts.push(m.index);
+  for (const st of starts){
+    let depth = 0, inStr = false;
+    for (let i = st; i < t.length; i++){
+      const ch = t[i];
+      if (inStr){ if (ch === "\\") i++; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true; else if (ch === "{") depth++; else if (ch === "}" && --depth === 0){ try { out.push(JSON.parse(t.slice(st, i+1))); } catch(e){} break; }
+    }
+  }
+  return out;
+}
+function parseCSV(text){
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"'){ if (text[i+1] === '"'){ cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ","){ row.push(cell); cell = ""; }
+    else if (ch === "\n"){ row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+
+document.getElementById("files").onchange = async e => {
+  const list = [];
+  for (const f of e.target.files) list.push(...fromText(await f.text()));
+  add(list);
+};
+document.getElementById("pastebtn").onclick = () => { add(fromText(document.getElementById("paste").value)); document.getElementById("paste").value = ""; };
+document.getElementById("csvbtn").onclick = async () => {
+  const url = document.getElementById("csv").value.trim(); if (!url) return;
+  try {
+    const t = await (await fetch(url)).text();
+    const list = [];
+    for (const row of parseCSV(t)) for (const cell of row) if (cell.trim().startsWith('{"game":"nightcap"')) list.push(...fromText(cell));
+    add(list);
+  } catch(e){ document.getElementById("msg").textContent = "The sheet could not be loaded. Check that it is published to the web as CSV. " + e.message; }
+};
+document.getElementById("reveal").onclick = e => { const s = document.getElementById("sol"); s.hidden = !s.hidden; e.target.textContent = s.hidden ? "Show" : "Hide"; };
+
+function show(){
+  const out = document.getElementById("out");
+  if (!subs.length){ out.innerHTML = ""; return; }
+  const N = subs.length;
+  const acc = {}; subs.forEach(s => acc[s.accused] = (acc[s.accused]||0) + 1);
+  const max = Math.max(...Object.values(acc));
+  const med = k => { const v = subs.map(s => s.counts?.[k] || 0).sort((a,b)=>a-b); return v[Math.floor((v.length-1)/2)]; };
+  const rejected = subs.filter(s => (s.log||[]).some(e => e.type==="hyp" && e.status==="rejected")).length;
+  const discr = subs.filter(s => (s.log||[]).some(e => e.disc)).length;
+  const contradicted = subs.filter(s => (s.log||[]).some(e => e.type==="test" && e.outcome==="contradicts")).length;
+  const conf = {}; subs.forEach(s => { conf[s.accused] = conf[s.accused] || []; conf[s.accused].push(s.confidence); });
+
+  out.innerHTML = `
+  <section class="panel">
+    <h2>Verdicts</h2>
+    ${Object.entries(acc).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<div class="bar"><span>${esc(k)}</span><div class="fill" style="width:${v/max*100}%"></div><b>${v}</b></div>`).join("")}
+    <p class="small muted">Average confidence by verdict: ${Object.entries(conf).map(([k,v]) => `${esc(k)} ${(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1)}`).join("; ")}</p>
+  </section>
+  <section class="panel">
+    <h2>How teams reasoned</h2>
+    <div class="grid">
+      <div><div class="stat">${N}</div><span class="muted">teams</span></div>
+      <div><div class="stat k-hyp">${med("h")}</div><span class="muted">hypotheses (median)</span></div>
+      <div><div class="stat k-pred">${med("p")}</div><span class="muted">predictions (median)</span></div>
+      <div><div class="stat k-test">${med("t")}</div><span class="muted">tests (median)</span></div>
+      <div><div class="stat">${rejected}</div><span class="muted">teams rejected a hypothesis</span></div>
+      <div><div class="stat">${contradicted}</div><span class="muted">teams recorded a contradicting test</span></div>
+      <div><div class="stat">${discr}</div><span class="muted">teams made a prediction that tells hypotheses apart</span></div>
+    </div>
+  </section>
+  ${Object.entries(BRIDGE_TITLES).map(([id, title]) => {
+    const ans = subs.filter(s => s.bridge?.[id]);
+    return `<section class="panel"><h2>${esc(title)}</h2>${ans.length ? `<ul class="answers">${ans.map(s => `<li><b>${esc(s.team)}</b> ${esc(s.bridge[id].answer)}</li>`).join("")}</ul>` : `<p class="muted">No team answered this card.</p>`}</section>`;
+  }).join("")}
+  <section class="panel">
+    <h2>Teams</h2>
+    <p class="small muted">Select a team to read its argument and log.</p>
+    <div class="table-wrap"><table><thead><tr><th>Team</th><th>Verdict</th><th>Conf.</th><th>H</th><th>P</th><th>T</th><th>Rejected</th><th>Minutes</th></tr></thead><tbody>
+    ${subs.map((s,i) => `<tr class="team" data-i="${i}" tabindex="0"><td>${esc(s.team)}</td><td>${esc(s.accused)}</td><td>${s.confidence}</td><td>${s.counts?.h||0}</td><td>${s.counts?.p||0}</td><td>${s.counts?.t||0}</td><td>${(s.log||[]).filter(e=>e.status==="rejected").length}</td><td>${s.minutes}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div id="detail"></div>
+  </section>`;
+  out.querySelectorAll("tr.team").forEach(tr => { tr.onclick = () => detail(subs[tr.dataset.i]); tr.onkeydown = e => { if (e.key==="Enter") detail(subs[tr.dataset.i]); }; });
+}
+function detail(s){
+  const A = s.argument || {};
+  const tag = e => (e.type==="hyp"?"H":e.type==="pred"?"P":"T") + e.n;
+  const byId = Object.fromEntries((s.log||[]).map(e => [e.id, e]));
+  document.getElementById("detail").innerHTML = `<h3>${esc(s.team)}: ${esc(s.accused)} (confidence ${s.confidence})</h3>
+    <p><span class="k-hyp">Explanation.</span> ${esc(A.hypothesis)}</p>
+    <p><span class="k-pred">What follows.</span> ${esc(A.deduction)}</p>
+    <p><span class="k-test">Testing.</span> ${esc(A.induction)}</p>
+    <p><b>Rivals.</b> ${esc(A.alternatives)}</p>
+    <p><b>Uncertainty.</b> ${esc(A.uncertainty)}</p>
+    <h3>Inquiry log</h3>
+    ${(s.log||[]).map(e => `<div class="entry ${e.type}"><b>${tag(e)}</b>${e.link && byId[e.link] ? ` <span class="muted small">(${e.type==="pred"?"from":"tests"} ${tag(byId[e.link])})</span>` : ""}${e.status && e.status!=="open" ? ` <span class="small">[${esc(e.status)}]</span>` : ""}${e.outcome ? ` <span class="small">[${esc(e.outcome)}]</span>` : ""}${e.disc ? ` <span class="small">[distinguishes]</span>` : ""} ${esc(e.text)}</div>`).join("") || `<p class="muted">Empty.</p>`}`;
+  document.getElementById("detail").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+</script>
+</body>
+</html>
