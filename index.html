@@ -1,0 +1,2224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Last Nightcap: a game about reasoning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6EBEE; --paper:#FFFFFF; --ink:#17202A; --muted:#55606B; --line:#C4CDD4;
+  --abd:#6A4B9D; --ded:#1B6A64; --ind:#985709; --warn:#A3281D; --tag:#F2CF5B; --tag-ink:#3A2E00;
+  --ui:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --type:"Special Elite","Courier New",Courier,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131920; --paper:#1D252E; --ink:#E4E9EE; --muted:#9BA7B3; --line:#34414E;
+    --abd:#B7A0DF; --ded:#6FC4BB; --ind:#E3A64C; --warn:#F08A7E; --tag:#C9A83A; --tag-ink:#1D1600;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131920; --paper:#1D252E; --ink:#E4E9EE; --muted:#9BA7B3; --line:#34414E;
+  --abd:#B7A0DF; --ded:#6FC4BB; --ind:#E3A64C; --warn:#F08A7E; --tag:#C9A83A; --tag-ink:#1D1600;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 var(--ui);min-height:100%}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em}
+h2{font-size:1.35rem} h3{font-size:1.08rem}
+p{margin:0 0 .8em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--abd);outline-offset:2px}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ink);color:var(--bg)}
+.top-inner{max-width:1280px;margin:auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.brand{font-family:var(--type);font-size:1.15rem;letter-spacing:.02em;margin-right:auto}
+.hbtn{background:none;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-size:.85rem;cursor:pointer;opacity:.8}
+.hbtn:hover{opacity:1}
+.clock{font-variant-numeric:tabular-nums;font-weight:700}
+.tabs{max-width:1280px;margin:auto;padding:0 16px;display:flex;gap:4px;overflow-x:auto}
+.tab{background:none;border:0;color:inherit;opacity:.72;padding:8px 12px 10px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{opacity:1;border-bottom-color:var(--tag)}
+.hbtn.logbtn{border-color:var(--tag);color:var(--tag)}
+.banner{max-width:1280px;margin:10px auto 0;padding:8px 16px}
+.banner div{background:var(--paper);border-left:5px solid var(--warn);padding:8px 12px}
+
+/* layout */
+.shell{max-width:1600px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px}
+aside.panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 110px);max-height:calc(100vh - 130px);overflow:auto}
+/* evidence and interviews side by side */
+.inv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.inv .chat{max-height:42vh}
+@media (max-width:900px){ .inv{grid-template-columns:minmax(0,1fr)} }
+/* the inquiry log is a side column on wide screens and a drawer on narrower ones */
+.logbtn{display:none}
+.logclose{display:none}
+@media (max-width:1359px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  aside.panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,94vw);max-height:none;border-radius:0;z-index:30;
+    transform:translateX(105%);transition:transform .2s ease;box-shadow:-6px 0 24px rgba(0,0,0,.25);
+    padding-top:calc(18px + env(safe-area-inset-top,0px));padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  body.logopen aside.panel{transform:none}
+  .logbtn{display:inline-block}
+  .logclose{display:inline-block;float:right}
+}
+.help{border-left:5px solid var(--ded)}
+.help ul{padding-left:1.2em;margin:.4em 0}
+.help li{margin-bottom:.35em}
+.stack>*+*{margin-top:16px}
+
+/* controls */
+.btn{border:1px solid var(--ink);background:var(--paper);padding:.42em .9em;border-radius:6px;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.quiet{border-color:var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.field{display:block;margin:0 0 12px}
+label.field>span{display:block;font-weight:700;margin-bottom:4px}
+input[type=text],select,textarea{width:100%;padding:.5em .6em;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+textarea{min-height:5.2em;resize:vertical}
+.hint{font-size:.88rem;color:var(--muted);margin-top:3px}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:6px;margin-bottom:8px;cursor:pointer}
+.choice input{margin-top:5px}
+
+/* start */
+.start{max-width:760px;margin:24px auto;padding:0 16px}
+.start h1{font-family:var(--type);font-size:clamp(2rem,6vw,3.2rem);font-weight:400;margin-bottom:.2em}
+.lede{font-size:1.1rem;max-width:62ch}
+ol.cycle{padding-left:1.3em;margin:0 0 1em}
+ol.cycle li{margin-bottom:.35em}
+.progress{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:8px 0}
+.progress>div{height:100%;background:var(--ded);width:0}
+
+/* inference colours */
+.t-hyp{--c:var(--abd)} .t-pred{--c:var(--ded)} .t-test{--c:var(--ind)}
+.kind{color:var(--c);font-weight:700}
+
+/* documents */
+.files{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.file{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer}
+.file[disabled]{cursor:default;opacity:.62}
+.code{font-family:var(--type);background:var(--tag);color:var(--tag-ink);padding:2px 8px 2px 12px;clip-path:polygon(8px 0,100% 0,100% 100%,8px 100%,0 50%);min-width:3.4em;text-align:center}
+.file .meta{font-size:.85rem;color:var(--muted)}
+.new-dot{width:9px;height:9px;border-radius:50%;background:var(--warn);margin-left:auto;flex:none}
+.sheet{position:relative;background:var(--paper);border:1px solid var(--line);padding:26px 24px 22px;font-family:var(--type);white-space:pre-wrap;line-height:1.6;max-width:72ch;box-shadow:3px 3px 0 var(--line)}
+.sheet .code{position:absolute;top:-12px;right:18px}
+.sheet h3{font-family:var(--type);font-weight:400;font-size:1.15rem;white-space:normal}
+.facts{list-style:none;padding:0;margin:0}
+.facts li{padding:8px 0;border-top:1px solid var(--line)}
+.rumour{font-style:italic}
+
+/* interviews */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.person{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:8px 10px;text-align:left;cursor:pointer}
+.person[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.person b{display:block}
+.chat{border:1px solid var(--line);border-radius:6px;padding:12px;max-height:52vh;overflow:auto;background:var(--bg)}
+.msg{margin:0 0 10px;max-width:88%}
+.msg.q{margin-left:auto;text-align:right}
+.msg .who{font-size:.8rem;color:var(--muted)}
+.msg .bubble{display:inline-block;padding:8px 11px;border-radius:8px;background:var(--paper);border:1px solid var(--line);text-align:left}
+.msg.q .bubble{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chip{border:1px dashed var(--line);background:none;border-radius:14px;padding:3px 10px;font-size:.88rem;cursor:pointer}
+
+/* log */
+.entry{border-left:5px solid var(--c);background:var(--bg);padding:8px 10px;margin-bottom:8px;border-radius:0 6px 6px 0}
+.entry .head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:.85rem}
+.entry.rejected .text{text-decoration:line-through;color:var(--muted)}
+.entry .link{font-size:.85rem;color:var(--muted)}
+.addbar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+.addbar .btn{border-color:var(--c);color:var(--c);font-weight:700;padding:.4em .3em}
+.next{font-size:.9rem;background:var(--bg);border:1px dashed var(--line);padding:8px 10px;border-radius:6px}
+.ev{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--paper)}
+.ev label{display:flex;gap:6px;font-size:.9rem;margin:3px 0}
+
+.entry .text{white-space:pre-line}
+textarea.short{min-height:3.2em}
+.linkbtn{background:none;border:0;padding:0;color:var(--abd);text-decoration:underline;cursor:pointer;font-size:inherit}
+.guide{max-width:78ch}
+.guide h3{margin-top:1.4em}
+.guide ul{padding-left:1.2em}
+.guide li{margin-bottom:.5em}
+.example{background:var(--bg);border-left:4px solid var(--abd);padding:10px 14px;margin:10px 0;border-radius:0 6px 6px 0}
+.example p{margin:.4em 0}
+.mcq{border-top:1px solid var(--line);padding:8px 0}
+.mcq p{margin:0 0 6px}
+.mcq select{max-width:220px}
+fieldset.consent{border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:0 0 14px}
+fieldset.consent legend{font-weight:700;padding:0 4px}
+.langs{justify-content:flex-end}
+.langs .btn{padding:.25em .8em;font-size:.9rem}
+dialog{border:0;border-radius:10px;padding:0;max-width:min(620px,94vw);background:var(--paper);color:var(--ink)}
+dialog::backdrop{background:rgba(10,14,20,.6)}
+.dlg{padding:22px;border-top:8px solid var(--c)}
+.dlg .research{border-left:3px solid var(--line);padding-left:12px}
+@media (prefers-reduced-motion:no-preference){ .msg{animation:rise .18s ease-out} @keyframes rise{from{opacity:0;transform:translateY(4px)}} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<dialog id="bridge"></dialog>
+<dialog id="newgame"></dialog>
+
+<script type="module">
+/* =====================================================================
+   CASE AND SETTINGS. Edit this section to change the game.
+   ===================================================================== */
+const CONFIG = {
+  title: "The Last Nightcap",
+  sessionMinutes: 60,
+  finalCallMinute: 45,          // banner telling teams to start their final argument
+  eventCode: "COATROOM",        // read this out mid-session to release the new evidence
+  // Optional Google Form collection. Leave empty to use file download only.
+  googleForm: { action: "https://docs.google.com/forms/d/e/1FAIpQLSftwO4soDdDqz47qFvoonz4zlK5a_cL_gwiseOyIJ-U-R2OIQ/formResponse", entryId: "entry.607613488" }, // e.g. "https://docs.google.com/forms/d/e/XXXX/formResponse", "entry.123456789"
+  // Optional extra columns in the Google Sheet: add short-answer questions to the form
+  // and put their entry IDs here (found the same way as entryId).
+  googleFormColumns: { team:"", kind:"", consent:"", mode:"", lang:"" },
+  defaultLanguage: "en",        // "en" or "da". Teams can switch on the start screen; a link ending in ?lang=da opens in Danish.
+  exercises: true,              // warm-up before the game and a follow-up exercise after the final argument
+  cohort: "2026 autumn",        // stored with every submission; change each time you run the course
+  caseVersion: "2026-09",       // change whenever you change the case, so data from different versions can be told apart
+  sections: [],                 // optional list of classes, e.g. ["English class, Alexander","Danish class, Anna"]; teams choose one at the start
+  // Randomised comparison between teams. Leave active:false for the first run. When active, each team is
+  // assigned an arm at random, or by a link ending in ?arm=NAME, which lets you balance the arms yourself.
+  experiment: { active:false, name:"scaffolding", arms:{ structured:{ scaffold:true, bridges:true }, free:{ scaffold:false, bridges:true } } },
+  researchContact: "the course lecturer", // who students contact to withdraw research consent
+  preferredModels: [
+    "Qwen2.5-3B-Instruct-q4f16_1-MLC",
+    "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+    "Phi-3.5-mini-instruct-q4f16_1-MLC",
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
+    "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+  ],
+  // Used instead when the graphics card lacks 16-bit shader support (common on phones and older
+  // laptops), where the models above can produce unreadable text.
+  preferredModelsF32: [
+    "Qwen2.5-1.5B-Instruct-q4f32_1-MLC",
+    "Llama-3.2-1B-Instruct-q4f32_1-MLC",
+    "Qwen2.5-3B-Instruct-q4f32_1-MLC",
+    "Llama-3.2-3B-Instruct-q4f32_1-MLC"
+  ],
+  maxAnswerTokens: 110,          // length limit for AI answers; shorter is faster on weak laptops
+  speed: { good:10, ok:25 },     // expected seconds per answer from the start-up speed test
+  webllmUrl: "https://esm.run/@mlc-ai/web-llm", // pin a version once tested, e.g. ...web-llm@0.2.79
+  storageKey: "nightcap-v4"
+};
+
+const OPENING_EN = "Viktor Lund died from digoxin in his nightcap. The decanter it came from was poisoned too. Yet his wife poured a glass from the same decanter at 22:34 and is perfectly well.";
+
+// Refill times for the 30 nights before the murder (26 Aug to 24 Sep).
+const REFILLS = ["22:31","22:28","22:35","22:30","22:33","22:24","22:29","22:32","22:36","22:30","22:27","22:34","22:31","22:41","22:29","22:30","22:33","22:28","22:35","22:32","22:30","22:26","22:34","22:31","22:29","22:38","22:30","22:33","22:27","22:32"];
+function refillLog(){
+  const d = new Date(2026,7,26), out = [];
+  const wd = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  REFILLS.forEach(t => { out.push(`${wd[d.getDay()]} ${String(d.getDate()).padStart(2," ")} ${mo[d.getMonth()]}   ${t}   P.H.`); d.setDate(d.getDate()+1); });
+  out.push("Fri 25 Sep   22:00   P.H.");
+  return "Kragsholm Manor housekeeping log\nStudy: cognac decanter refilled (time written by the person refilling)\n\n" + out.join("\n");
+}
+
+// tier 0 = available from the start; 1 = needs a hypothesis and a linked prediction;
+// 2 = needs two hypotheses and at least one recorded test; "event" = released by the event code.
+const DOCS_EN = [
+ { id:"D_SCENE", code:"E1", tier:0, title:"Scene report", text:
+`Kragsholm Manor, Funen. Friday 25 September.
+
+23:30  Peter Holm, estate manager, enters the study in the east wing to bring Viktor Lund his usual evening tea. He finds Lund (64), chair of the Lund Foundation, collapsed in his armchair, barely conscious, with a very slow and irregular pulse. Ambulance called 23:33. Lund died in hospital at 02:40 on Saturday.
+
+On the side table: a cognac glass, about one third full, and the crystal decanter, about half full.
+
+Toxicology: very high concentrations of digoxin in the glass and in the small crystal decanter. One glass from the decanter would be a dangerous overdose for anyone, and more so for a heart patient already taking the drug. Lund was prescribed digoxin tablets for a heart condition. The hospital measured a level in his blood many times above the therapeutic range.
+
+Marianne Lund states that she poured herself a small cognac from the same decanter at about 22:34 and took it to her room. She has no symptoms.
+
+According to his wife and the manager, Lund took a nightcap in the study shortly after 23:00 every night.` },
+ { id:"D_GUESTS", code:"E2", tier:0, title:"The house and the people in it", text:
+`Kragsholm Manor is the Lund family home. It also hosts the Lund Foundation's meetings. The annual grant meeting was due to start on Saturday at 09:00.
+
+In the house on Friday night:
+Viktor Lund, chair of the foundation.
+Marianne Lund, his wife.
+Jonas Brink, director of the foundation. Guest wing.
+Selma Akhtar, researcher, invited to present her appeal against the rejection of her grant application. Guest wing.
+Peter Holm, estate manager. Hired for the evening: a bartender, a terrace waiter, a cloakroom attendant.
+
+The study has an electronic lock. It opens with Viktor's card, Marianne's card, the spare Lund card or a staff card, and every entry is logged. Guest cards do not open it.
+
+The hall connects the bar, the cloakroom and the east-wing corridor to the study. The terrace is reached through the bar.
+
+Evening: dinner 19:30 to 21:30 (several people heard Viktor Lund and Selma Akhtar argue), then the bar and the terrace. According to the staff, Viktor Lund fetched papers from the study after dinner and read them in the drawing room until he went out to the terrace.` },
+ { id:"D_LAB", code:"E3", tier:1, bridge:"BC_VALID", title:"Lab report: Marianne Lund's glass", text:
+`Item: cognac glass from the nightstand in the Lund bedroom. Identified by Marianne Lund as the glass she filled at about 22:34. About half the contents remain. Fingerprints: Marianne Lund only.
+
+Result: no digoxin detected. The detection limit is far below a harmful dose.
+
+The decanter was tested again: same result as the scene report.` },
+ { id:"D_KEY_TONIGHT", code:"E4", tier:1, title:"Study door log, Friday", text:
+`Study door, east wing. Friday 25 September.
+Entries only. Exits are not logged.
+
+19:24  V. Lund (own card)
+21:36  V. Lund (own card)
+22:31  Staff card: P. Holm
+22:34  M. Lund (own card)
+22:48  Spare Lund card
+23:07  V. Lund (own card)
+23:30  Staff card: P. Holm` },
+ { id:"D_PILLS", code:"E5", tier:1, title:"Viktor Lund's medication", text:
+`Found in the bathroom of the Lund bedroom: digoxin 250 microgram tablets. 100 tablets dispensed on 14 September by the pharmacy in Faaborg. Dose: one tablet each morning.
+
+Taken as prescribed from 15 September, 89 tablets should have been left on the evening of 25 September.
+
+Tablets in the bottle: 49.
+
+Marianne Lund states that the bottle has stood in the bathroom since it arrived. She did not collect it from the pharmacy.` },
+ { id:"D_BAR", code:"E6", tier:1, title:"Bar receipts and bartender's statement", text:
+`Receipts, Friday evening. Bar open from 21:30.
+21:42  J. Brink, gin and tonic
+21:50  S. Akhtar, glass of white wine
+22:05  M. Lund, sparkling water
+22:41  J. Brink, gin and tonic
+23:02  J. Brink, espresso
+
+Bartender: "Mr Brink was at the bar most of the evening. Around quarter to eleven he said he had to make a call and went out into the hall. He came back just before eleven and ordered an espresso. Ms Akhtar went out to the terrace at about twenty to eleven. Mrs Lund left the bar at about half past ten."` },
+ { id:"D_HOUSE", code:"E7", tier:2, bridge:"BC_INDUCT", title:"Housekeeping log: decanter refills", text: refillLog() },
+ { id:"D_KEY_MONTH", code:"E8", tier:2, title:"Study door, last 30 nights (summary)", text:
+`Summary from the security contractor. Study door, 26 August to 24 September.
+
+Evenings after 22:00:
+M. Lund: entries between 22:15 and 22:45 on 26 of 30 nights. Typical time 22:32.
+V. Lund: entries between 22:55 and 23:15 on 28 of 30 nights.
+Staff card, P. Holm: between 22:24 and 22:41 on all 30 nights. Again between 23:25 and 23:35 on 27 nights.
+Spare Lund card: none.
+Other cards: none.
+
+Spare Lund card, all hours: one entry, Thursday 24 September at 14:12. Before that, last used on 3 May.` },
+ { id:"D_EXPENSE", code:"E9", tier:2, title:"Foundation expense claims, September (extract)", text:
+`Claimant: Jonas Brink, director.
+
+08 Sep  Train Copenhagen to Odense, board preparation          312 kr
+14 Sep  Taxi, Kragsholm to Faaborg pharmacy and back,
+        "errand for V. Lund (prescription)"                     486 kr
+18 Sep  Lunch meeting with external auditor. Cancelled by J.B.    0 kr
+22 Sep  Printing of meeting folders                           1,940 kr` },
+ { id:"D_EMAIL", code:"E10", tier:2, title:"Unsent draft on Viktor Lund's laptop", text:
+`Saved Friday 25 September, 18:52. Not sent.
+
+To: Board members, Lund Foundation
+Subject: An item for tomorrow
+
+Dear colleagues,
+Tomorrow I will add one item to the agenda: an internal review of how our grants for 2024 and 2025 were reported. The figures in our accounts do not match what our partners say they received. On 8 September I asked Jonas for the partner statements behind these figures. I have still not received them. I have not yet told the staff what I found, because I want the board to hear it first. Please treat this as confidential until then.
+
+Viktor` },
+ { id:"D_TERRACE", code:"E11", tier:2, title:"Terrace waiter's statement", text:
+`"Mr Lund came out onto the terrace at about twenty to eleven. Ms Akhtar was already there, smoking. They talked the whole time, calmly, nothing like at dinner. I brought him a glass of water at about ten to eleven. He went back in at eleven, maybe a minute after. Nobody else came out while they were there."` },
+ { id:"D_COAT", code:"E12", tier:"event", title:"New evidence: the spare card", text:
+`Saturday, 10:15. Clearing the cloakroom this morning, the attendant finds a keycard in the pocket of Marianne Lund's coat.
+
+It is the spare Lund card for the study.
+
+Marianne Lund's coat has hung in the cloakroom since she came home at 19:10.` },
+ { id:"D_CLOAK", code:"E13", tier:"event", title:"Cloakroom attendant's statement", text:
+`"It was busy until about half past seven, then quiet. Mrs Lund never came back for her coat. After ten o'clock only one person came to the coats: Mr Brink, at about five to eleven. He said he wanted his scarf and took it from the rack himself. The coats hang close together. I didn't see him go outside."` }
+];
+
+const BRIDGES_EN = {
+ BC_VALID: { kind:"pred", title:"Valid is not the same as sound",
+   text:"A clean glass seems to show that the decanter was harmless at 22:34, so the poison went in later. That conclusion follows necessarily, but only if the premises hold: that this is the glass she filled, that the test is reliable, that she poured it from the decanter when she says. Notice also exactly what follows: after she poured, not after she left.",
+   research:"In research design, deduction is how you derive expectations from a theory. The derivation can be flawless and the conclusion still wrong if a premise fails, for example how a concept was operationalised or measured.",
+   question:"Which premise behind this deduction would you check first, and how?" },
+ BC_INDUCT: { kind:"test", title:"Thirty nights, one pattern",
+   text:"On 30 nights in a row the decanter was refilled between 22:24 and 22:41. Concluding that last night's refill also happened around 22:30 is induction: a generalisation from observed cases to an unobserved one. It can be strong, but it is never certain.",
+   research:"The same move underlies generalising from a sample or from cases. Its strength depends on how many cases there are, how they were selected, and whether the new case belongs to the same population.",
+   question:"Was last night an ordinary night in the sense that matters here? What would make the pattern a poor guide?" },
+ BC_ABDUCT: { kind:"hyp", title:"More than one explanation",
+   text:"Peirce called abduction \u201cthe process of forming an explanatory hypothesis\u201d and the only inference that introduces a new idea (Collected Papers 5.171\u2013172). It is also the weakest: several hypotheses can make the same surprising fact unsurprising.",
+   research:"Qualitative researchers reason abductively when a finding does not fit existing theory (Timmermans and Tavory 2012). The design question is how to choose between rival explanations, which means finding where they predict different things.",
+   question:"Name one observation where your two hypotheses predict different things." },
+ BC_CONFIRM: { kind:"test", title:"Evidence that fits too well",
+   text:"The spare card turns up in Marianne Lund's coat. If you already suspected her, this feels like confirmation. Before accepting it, ask what else would have to be true if she put it there, and who else could have.",
+   research:"Confirmation bias in analysis means giving more weight to evidence that fits your current explanation than to evidence that does not. Deriving predictions in advance and looking for disconfirming cases are the design answers.",
+   question:"If Marianne put the card there, what else should you find? Do you find it?" }
+};
+
+// Exercises. A and B are used before and after the game, in random order per team.
+// C is for an individual follow-up later in the course (open the game with ?retest).
+// The classification statements avoid cue words such as "if" or "perhaps", so students
+// have to recognise the structure of the inference, not its wording.
+const EXERCISES_EN = {
+ A: { fact:"In one Danish municipality, the number of citizens attending public hearings on local planning doubled from one year to the next. In the neighbouring municipalities, attendance stayed the same.",
+   items:[
+    { text:"Attendance went up in each of the twelve districts we checked. The three districts we have not checked are similar, so attendance went up there too.", answer:"induction" },
+    { text:"The new online booking system was launched in May. The rise in attendance began in February. The booking system cannot have started the rise.", answer:"deduction" },
+    { text:"Attendance doubled in the one municipality with a disputed wind turbine project. The dispute is what brought new residents to the hearings.", answer:"abduction" },
+    { text:"Every hearing held by the municipality is announced in the local paper. The March meeting was not announced in the local paper. So it was not a hearing held by the municipality.", answer:"deduction" },
+    { text:"In each of the last eight years with a controversial project on the agenda, attendance rose. Next year's agenda has a controversial project, so attendance will rise again.", answer:"induction" },
+    { text:"Most of the new attendees came from one housing area. The most plausible explanation is that the housing association encouraged its residents to go.", answer:"abduction" } ] },
+ B: { fact:"At one university, the share of first-year students who dropped out of a programme fell by half in a single year. At comparable programmes elsewhere, dropout stayed the same.",
+   items:[
+    { text:"Dropout fell in all six programmes we checked that introduced mentoring. The other programmes that introduced mentoring saw a fall too.", answer:"induction" },
+    { text:"The mentoring scheme started in the spring semester. The fall in dropout was already visible the autumn before. The mentoring scheme cannot have started the fall.", answer:"deduction" },
+    { text:"The fall in dropout came in the year the programme moved all teaching into small groups. The small groups are what kept students from leaving.", answer:"abduction" },
+    { text:"Every student who fails two exams must meet an adviser. Sara has not met an adviser. So Sara has not failed two exams.", answer:"deduction" },
+    { text:"In every year the programme ran an introduction camp, dropout was below average. The camp runs again next year, so dropout will be below average again.", answer:"induction" },
+    { text:"Most students who stayed mentioned their study group. The most plausible explanation is that the study groups made them feel they belonged.", answer:"abduction" } ] },
+ C: { fact:"On one regional bus route, the number of passengers rose by 30 per cent in a year. On the other routes in the region, passenger numbers stayed the same.",
+   items:[
+    { text:"Passenger numbers rose on each of the ten departures we counted. They rose on the departures we did not count as well.", answer:"induction" },
+    { text:"The fare cut came into force in October. Passenger numbers had already risen by August. The fare cut cannot have started the rise.", answer:"deduction" },
+    { text:"The rise began in the month a large employer moved its offices next to the route. The move is what brought the new passengers.", answer:"abduction" },
+    { text:"Every bus on the route has a ticket reader. The Tuesday bus had no ticket reader. So the Tuesday bus was not on the route.", answer:"deduction" },
+    { text:"Every time the parallel road was closed for repairs, passenger numbers went up. The road closes again in spring, so passenger numbers will go up then.", answer:"induction" },
+    { text:"Many of the new passengers were students. The most plausible explanation is that the new campus timetable made the bus the fastest way to class.", answer:"abduction" } ] }
+};
+const EXPERIENCE_EN = [
+  { id:"distinguish", text:"The game helped us understand the difference between abduction, deduction and induction." },
+  { id:"hypotheses", text:"The game helped us write hypotheses that could be tested." },
+  { id:"characters", text:"The characters were convincing enough to be worth questioning." }
+];
+
+// Characters. "facts" are what the character knows and may say. Each topic has keywords,
+// optional "requires" (tier, docs, event), a brief for the AI, a scripted line, and optionally
+// a "locked" version used until the requirement is met. Testimonies go into the team's notes.
+const CHARACTERS_EN = [
+ { id:"marianne", name:"Marianne Lund", role:"Viktor's wife, 58",
+   persona:"Dry, controlled and tired. You speak in short, precise sentences. You resent being suspected but stay civil. The marriage was over; you are shocked, not heartbroken.",
+   facts:"- You live at Kragsholm Manor with Viktor. You came home from Odense at 19:10 and left your coat in the cloakroom by the hall.\n- Dinner was 19:30 to 21:30. Viktor and Selma Akhtar argued at dinner about her rejected application.\n- You sat in the bar with sparkling water until about 22:30.\n- At about 22:34 you went into the study, as you do most nights, poured a small cognac from the decanter, took your book and went to your bedroom. You read and heard nothing.\n- Peter Holm knocked on your door just after 23:30 with the news.\n- You have your own keycard for the study.\n- After dinner Viktor fetched papers from the study and read them in the drawing room until he went out to the terrace at about 22:40. He died in hospital during the night.",
+   topics:[
+    { label:"Last night in the study", keywords:["study","cognac","decanter","22:34","drink","glass","pour","routine","book","half past ten","bedroom"],
+      brief:"Say you went to the study at about 22:34, as most nights, poured a small cognac from the decanter, took your book and went to bed. It tasted normal. Your glass is still on your nightstand.",
+      line:"I went to the study at about twenty-five to eleven, as I do most nights. I poured a small cognac from the decanter, took my book and went to bed. It tasted as it always does. The glass is still on my nightstand, if your people want it.",
+      testimony:{ id:"T_M_ROUTINE", text:"Marianne Lund: she goes to the study most nights around 22:30. Last night at about 22:34 she poured a small cognac from the decanter and took it to bed." } },
+    { label:"The marriage", keywords:["divorce","marriage","married","husband","relationship","inherit","money","will","prenup","love","wife"], requires:{ tier:1 },
+      brief:"Admit reluctantly that you filed for divorce in August, and that under your prenuptial agreement you would have left with very little, whereas now you inherit. Say you can see how that looks, which is exactly why you did not mention it.",
+      line:"Fine. I filed for divorce in August. Under our prenuptial agreement I would have left with very little, and now I inherit. I can see how that looks. That is why I didn't mention it.",
+      testimony:{ id:"T_M_DIVORCE", text:"Marianne Lund: she filed for divorce in August. Under the prenuptial agreement she would have received little; as a widow she inherits." },
+      locked:{ brief:"Be cool and evasive. Say your marriage was long and complicated, like most long marriages, and ask whether that is really what they want to spend their time on.",
+        line:"We were married for thirty-one years. Long, and complicated, like most long marriages. Is that really what you want to spend your time on?" } },
+    { label:"His medication", keywords:["pill","tablet","medic","digoxin","heart","prescription","pharmacy","bottle"],
+      brief:"Say Viktor took one heart tablet every morning with his coffee. The bottle stood in your bathroom. You never collected his prescriptions; he had people run errands for him, you do not know who did it this time.",
+      line:"He took one tablet every morning with his coffee. The bottle stood in our bathroom. I never collected his prescriptions. He had people for that; I don't know who went this time." },
+    { label:"The keycards", keywords:["card","keycard","spare","pocket","coat","cloakroom","access"], requires:{ event:true },
+      brief:"React with cold anger. You hung your coat in the cloakroom at 19:10 and have not touched it since. You have your own card and have never needed the spare. Someone put it there; they should ask themselves who.",
+      line:"I hung that coat in the cloakroom at ten past seven and haven't touched it since. I have my own card, why on earth would I need the spare? Someone put it there. Ask yourselves who.",
+      testimony:{ id:"T_M_COAT", text:"Marianne Lund: she has not touched her coat since 19:10, has her own card and says someone planted the spare card on her." },
+      locked:{ brief:"Say you have your own card for the study. There is a spare Lund card, normally kept in the estate office, you think. Peter Holm would know.",
+        line:"I have my own card. There's a spare somewhere, in the estate office I think. Peter would know." } },
+    { label:"The others", keywords:["others","jonas","brink","director","selma","akhtar","peter","holm","who","suspect","enem"],
+      brief:"Give your opinions. Selma Akhtar made a scene at dinner, but Viktor seemed calmer later. Jonas Brink has been oddly attentive to you this week, and Viktor had been cold to him for weeks; you never learned why. Peter Holm has served the family for twelve years.",
+      line:"Selma made a scene at dinner, but Viktor seemed calmer later. Jonas has been very attentive to me this week. Viktor had been cold to him for weeks, I never learned why. Peter has been with us twelve years." }
+   ],
+   deflections:["I don't see what that has to do with anything.","I don't know, and I won't guess.","You'll have to ask someone else about that."] },
+
+ { id:"peter", name:"Peter Holm", role:"Estate manager, 51",
+   persona:"Polite, formal and anxious. You over-explain, apologise often and always say 'Mr Lund' and 'Mrs Lund'.",
+   facts:"- You have been estate manager at Kragsholm for twelve years.\n- Every evening you refill the cognac decanter in Mr Lund's study and write the time in the housekeeping log.\n- At 23:30 you brought Mr Lund his usual tea, found him collapsed in his armchair and called the ambulance at 23:33. Then you told Mrs Lund.\n- There is a spare Lund keycard, normally kept in the estate office.\n- After dinner Viktor fetched papers from the study and read them in the drawing room until he went out to the terrace at about 22:40. He died in hospital during the night.",
+   topics:[
+    { label:"The refill", keywords:["refill","decanter","cognac","fill","housekeeping","log","22:00","ten o'clock","bottle","drinks"], requires:{ docs:["D_HOUSE"] },
+      brief:"Break down. Admit that you refilled the decanter at about 22:30, not 22:00, and wrote the wrong time in the log. Confess why: for about a year you have poured cheaper cognac into the decanter and sold Mr Lund's good bottles. You panicked about that when you heard about poison. Insist you put nothing else in the decanter.",
+      line:"...All right. It was half past ten, not ten. I wrote ten because... For about a year I've been pouring cheaper cognac into that decanter and selling Mr Lund's good bottles. When I heard the word poison, I panicked. But I put nothing else in it. Nothing.",
+      testimony:{ id:"T_P_REFILL_TRUE", text:"Peter Holm (revised): he refilled the decanter at about 22:30 and wrote 22:00 in the log. He admits he has been replacing the Lunds' expensive cognac with a cheaper one and selling the originals." },
+      locked:{ brief:"Insist that you refilled the decanter at 22:00 exactly, as you always do, and that it is written in the housekeeping log. Become a little defensive if pressed.",
+        line:"At ten o'clock, as always. It's in the housekeeping log. I've done it the same way for twelve years.",
+        testimony:{ id:"T_P_REFILL_LIE", text:"Peter Holm: he refilled the decanter at 22:00, as always, and wrote it in the housekeeping log." } } },
+    { label:"Finding Mr Lund", keywords:["found","find","body","tea","23:30","ambulance","dead","discover","eleven thirty","half past eleven"],
+      brief:"Describe finding Mr Lund at 23:30 when you brought his tea: slumped in the armchair, the glass on the side table, grey and barely able to speak. You called the ambulance at 23:33 and then went to Mrs Lund. He died in hospital during the night.",
+      line:"I brought his tea at half past eleven, as always. He was slumped in the armchair, the glass beside him, grey in the face. He could hardly speak. I called the ambulance at 23:33 and went up to Mrs Lund. They told us this morning that he died in the night." },
+    { label:"The spare card", keywords:["card","keycard","spare","access","office","key"], requires:{ docs:["D_KEY_TONIGHT"] },
+      brief:"Explain that on Thursday Mr Lund took the spare card from the estate office. You believe he gave it to Mr Brink, who carried the boxes of meeting folders into the study on Thursday afternoon. Admit you did not actually see the handover.",
+      line:"Mr Lund took the spare card from the estate office on Thursday. I believe he gave it to Mr Brink, who carried the boxes of meeting folders into the study that afternoon. I didn't see him hand it over, I should say. But that's what I understood.",
+      testimony:{ id:"T_P_CARD", text:"Peter Holm: on Thursday Viktor took the spare card from the estate office. Peter believes Viktor gave it to Jonas Brink, who carried meeting folders into the study, but he did not see the handover." },
+      locked:{ brief:"Say the study takes a family card or a staff card, and that the spare is normally kept in the estate office. Be vague about where it is now.",
+        line:"The study takes a family card or a staff card. There's a spare, normally in the estate office. I would have to check." } },
+    { label:"The others", keywords:["others","jonas","brink","selma","akhtar","marianne","mrs lund","who","suspect"],
+      brief:"Be discreet but let opinions slip: Mr and Mrs Lund had not been close for some time; Ms Akhtar shouted at dinner; Mr Brink has been very busy with the meeting folders all week.",
+      line:"It isn't my place. Mr and Mrs Lund had not been close for some time. Ms Akhtar raised her voice at dinner. Mr Brink has been very busy with the folders all week." }
+   ],
+   deflections:["I'm sorry, I really couldn't say.","I wouldn't know about that, I'm afraid.","Forgive me, that's not something I was involved in."] },
+
+ { id:"selma", name:"Selma Akhtar", role:"Researcher, 39",
+   persona:"Sharp, proud and articulate. You argue like an academic and take offence at being suspected, but you want the truth found.",
+   facts:"- You are an environmental sociologist. The foundation rejected your grant application in June; you were invited to present your appeal against the rejection at the board meeting on Saturday.\n- At dinner (19:30 to 21:30) you argued loudly with Viktor about the rejection.\n- In the bar you had a glass of white wine at 21:50.\n- At about 22:38 you went out to the terrace to smoke. Viktor came out at about 22:40. You talked calmly until about 23:00, when he went inside.\n- Nobody else came out apart from the waiter.\n- After dinner Viktor fetched papers from the study and read them in the drawing room until he went out to the terrace at about 22:40. He died in hospital during the night.",
+   topics:[
+    { label:"The terrace", keywords:["terrace","after dinner","where were you","smok","outside","22:4","evening","alibi","eleven"],
+      brief:"Say you went out to smoke at about 22:38, Viktor joined you at about 22:40, you talked calmly until about 23:00 and he went inside. The waiter brought him water.",
+      line:"I went out to smoke at about twenty to eleven. Viktor joined me a couple of minutes later and we talked until eleven. The waiter brought him water. Then he went in, and I finished my cigarette.",
+      testimony:{ id:"T_S_TERRACE", text:"Selma Akhtar: she was on the terrace with Viktor Lund from about 22:40 until about 23:00." } },
+    { label:"What Viktor said", keywords:["talk","said","conversation","discuss","what did he","money","staff","tomorrow","meeting"], requires:{ tier:1 },
+      brief:"Say Viktor apologised for dinner, invited you to resubmit, and seemed distracted. He said he had found out where the money went and that tomorrow would be unpleasant for someone on his staff. He did not say who.",
+      line:"He apologised for dinner and asked me to resubmit. He was distracted. At one point he said he had found out where the money went, and that tomorrow would be unpleasant for someone on his staff. He didn't say who.",
+      testimony:{ id:"T_S_MONEY", text:"Selma Akhtar: on the terrace Viktor said he had found out where the money went and that the next day would be unpleasant for someone on his staff." },
+      locked:{ brief:"Say he apologised for dinner and you talked about your application. The rest was private and you want to know why it matters before you repeat it.",
+        line:"He apologised for dinner. We talked about my application. The rest was private, and I'd like to know why it matters before I repeat it." } },
+    { label:"The argument at dinner", keywords:["argu","dinner","reject","application","angry","fight","motive","grant","shout"],
+      brief:"Admit the argument openly: the rejection was unfair and you said so loudly. Point out that he later invited you to resubmit, so you had every reason to want him alive.",
+      line:"Yes, I shouted. The rejection was unfair and I said so. But an hour later he asked me to resubmit. I had every reason to want him alive.",
+      testimony:{ id:"T_S_DINNER", text:"Selma Akhtar: admits the dinner argument about her rejected application, but says Viktor later invited her to resubmit." } },
+    { label:"The others", keywords:["others","jonas","brink","marianne","peter","who","suspect","director"],
+      brief:"Give opinions: Jonas Brink handled your application and was evasive about the budget figures; Marianne Lund seemed elsewhere all evening; you barely noticed the manager.",
+      line:"Jonas handled my application and was oddly evasive about the budget figures. Marianne seemed elsewhere all evening. The manager I hardly noticed." }
+   ],
+   deflections:["That's speculation, and I'd rather not add to it.","I have no idea. I was a guest, not a resident.","Why would I know that?"] },
+
+ { id:"jonas", name:"Jonas Brink", role:"Foundation director, 41",
+   persona:"Smooth, helpful and a little too eager to assist. You gently steer suspicion towards Marianne Lund (the divorce, which you 'shouldn't mention') and Peter Holm (who handles the drinks), without accusing anyone outright. You stay calm.",
+   facts:"- You have been director of the Lund Foundation for six years. You brought the boxes of meeting folders to the manor on Thursday.\n- You say you were in the bar all evening after dinner, apart from stepping out briefly to phone your sister around eleven. You do not know exact times.\n- You say you have never had the spare Lund keycard; Viktor kept it.\n- You describe Viktor as a demanding but fair chair.\n- After dinner Viktor fetched papers from the study and read them in the drawing room until he went out to the terrace at about 22:40. He died in hospital during the night.",
+   forbidden:[/\bjeg (puttede|kom|hældte|knuste|blandede|lagde) (det|dem|tabletterne|pillerne|digoxin|noget)/i, /\bjeg (havde|tog|brugte|lånte|plantede|gemte) (det |et )?(ekstra)?(kort|nøglekort)/i,
+     /\bi (put|added|crushed|mixed|poured|slipped) (it|them|the|some|pills|tablets|digoxin|something)/i, /\bi (had|took|used|kept|borrowed|planted|hid) (the |a )?(spare|card)/i, /\bi planted\b/i],
+   topics:[
+    { label:"His evening", keywords:["where were you","bar","evening","after dinner","call","phone","sister","left","alibi","22:4"],
+      brief:"Say you were in the bar all evening apart from stepping out once to phone your sister, around eleven, maybe a little before. Be vague about how long.",
+      line:"At the bar, all evening. I stepped out once to phone my sister, around eleven, maybe a little before. A few minutes, no more.",
+      testimony:{ id:"T_J_BAR", text:"Jonas Brink: he was in the bar all evening, apart from stepping out briefly to phone his sister around eleven." } },
+    { label:"The spare card", keywords:["card","keycard","spare","access","east wing","study"],
+      brief:"Deny ever having the spare card. Viktor kept it himself. If someone claims you had it, say they must be confused; you only carried folders. If told the spare card opened the study on Thursday afternoon, say Viktor must have let you in with it.",
+      line:"The spare card? Viktor kept that himself. If someone says otherwise they're confused. I carried folders, that's all.",
+      testimony:{ id:"T_J_CARD", text:"Jonas Brink: denies ever having the spare card and says Viktor kept it." } },
+    { label:"The prescription", keywords:["pill","tablet","medic","digoxin","prescription","pharmacy","heart","taxi","errand"], requires:{ docs:["D_EXPENSE"] },
+      brief:"Admit easily that you collected Viktor's prescription from the pharmacy on 14 September: you ran errands for him all the time. Say you handed him the bag unopened.",
+      line:"Yes, I collected it. I ran errands for Viktor all the time. I handed him the bag unopened.",
+      testimony:{ id:"T_J_PHARM", text:"Jonas Brink: admits he collected Viktor's prescription on 14 September; says he handed it over unopened." },
+      locked:{ brief:"Say everyone knew Viktor had a heart condition, but you have nothing to do with his medication.",
+        line:"Everyone knew about his heart. But his medication was his own business." } },
+    { label:"The scarf", keywords:["scarf","cloakroom","coat","attendant"], requires:{ event:true },
+      brief:"Say you fetched your scarf because you meant to step out onto the terrace for air, then decided it was too cold and went back to the bar. Stay calm.",
+      line:"I fetched my scarf to get some air on the terrace. Then I decided it was too cold and went back to the bar. Hardly a crime.",
+      testimony:{ id:"T_J_SCARF", text:"Jonas Brink: he fetched his scarf to go out on the terrace, then decided it was too cold and went back to the bar." },
+      locked:{ brief:"Say you don't remember going to the cloakroom; you may have at some point.",
+        line:"The cloakroom? I don't remember. I may have, at some point." } },
+    { label:"Foundation finances", keywords:["audit","review","email","money","report","figures","fraud","account","board","agenda","financ"], requires:{ docs:["D_EMAIL"] },
+      brief:"Say you had no idea Viktor planned a review of grant reporting. If asked about the partner statements he requested, say you were still collecting them and these things take time. The figures are complex and any discrepancy has an innocent explanation. Show a flicker of irritation, then recover.",
+      line:"A review? He never mentioned it. The figures are complicated, and any discrepancy will have an innocent explanation. Honestly, I'd have liked to be told.",
+      testimony:{ id:"T_J_AUDIT", text:"Jonas Brink: says he knew nothing about Viktor's planned review of grant reporting and that any discrepancy has an innocent explanation." },
+      locked:{ brief:"Say the foundation's finances are in good order and tomorrow's meeting was routine.",
+        line:"Our finances are in good order. Tomorrow was a routine meeting." } },
+    { label:"The others", keywords:["others","marianne","mrs lund","wife","peter","holm","selma","akhtar","who","suspect","think"],
+      brief:"Reluctantly steer suspicion: you shouldn't say it, but Marianne had filed for divorce; Peter handles all the drinks; Selma shouted at Viktor. Do not accuse anyone outright.",
+      line:"I shouldn't say this. Marianne had filed for divorce, I believe. And Peter handles all the drinks in that house. Selma shouted at him, of course. I'm not accusing anyone." }
+   ],
+   deflections:["I'm happy to help, but I really don't know.","Good question. I wish I could tell you.","That's outside what I saw, I'm afraid."] }
+];
+
+const CONTENT_EN = { OPENING:OPENING_EN, DOCS:DOCS_EN, BRIDGES:BRIDGES_EN, EXERCISES:EXERCISES_EN, EXPERIENCE:EXPERIENCE_EN, CHARACTERS:CHARACTERS_EN };
+
+// ---------------- Danish content ----------------
+// Documents, bridge cards, exercises and the characters' spoken lines in Danish. The AI briefs and
+// facts stay in English (small models follow English instructions more reliably); the model is told
+// to answer in Danish. Topic order must match the English characters exactly.
+const CONTENT_DA = (() => {
+const OPENING = "Viktor Lund døde af digoxin i sin godnatcognac. Karaflen, den kom fra, var også forgiftet. Alligevel skænkede hans kone sig et glas fra samme karaffel kl. 22.34, og hun har det fint.";
+function refillLogDa(){
+  const d = new Date(2026,7,26), out = [];
+  const wd = ["søn","man","tir","ons","tor","fre","lør"], mo = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+  REFILLS.forEach(t => { out.push(`${wd[d.getDay()]} ${String(d.getDate()).padStart(2," ")} ${mo[d.getMonth()]}   ${t.replace(":",".")}   P.H.`); d.setDate(d.getDate()+1); });
+  out.push("fre 25 sep   22.00   P.H.");
+  return "Kragsholm Gods, husholdningslog\nArbejdsværelset: cognackaraflen fyldt op (klokkeslæt noteret af den, der fylder op)\n\n" + out.join("\n");
+}
+const DOCS = {
+ D_SCENE:{ title:"Rapport fra gerningsstedet", text:
+`Kragsholm Gods, Fyn. Fredag den 25. september.
+
+23.30  Godsforvalter Peter Holm går ind i arbejdsværelset i østfløjen med Viktor Lunds sædvanlige aftente. Han finder Lund (64), formand for Lund Fonden, sammensunket i lænestolen, knap ved bevidsthed og med meget langsom og uregelmæssig puls. Ambulance tilkaldt 23.33. Lund døde på hospitalet kl. 02.40 natten til lørdag.
+
+På sidebordet: et cognacglas, cirka en tredjedel fyldt, og den lille krystalkaraffel, cirka halvt fuld.
+
+Toksikologi: meget høje koncentrationer af digoxin i glasset og i karaflen. Ét glas fra karaflen ville være en farlig overdosis for enhver og i endnu højere grad for en hjertepatient, der allerede tager stoffet. Lund fik ordineret digoxintabletter for en hjertesygdom. Hospitalet målte et niveau i hans blod mange gange over det terapeutiske niveau.
+
+Marianne Lund forklarer, at hun skænkede sig en lille cognac fra samme karaffel omkring kl. 22.34 og tog den med ind på sit værelse. Hun har ingen symptomer.
+
+Ifølge hans kone og forvalteren drak Lund hver aften en godnatcognac i arbejdsværelset kort efter kl. 23.00.` },
+ D_GUESTS:{ title:"Huset og de tilstedeværende", text:
+`Kragsholm Gods er familien Lunds hjem. Det lægger også lokaler til Lund Fondens møder. Fondens årlige bevillingsmøde skulle begynde lørdag kl. 09.00.
+
+I huset fredag aften:
+Viktor Lund, fondens formand.
+Marianne Lund, hans kone.
+Jonas Brink, fondens direktør. Gæstefløjen.
+Selma Akhtar, forsker, inviteret til at fremlægge sin klage over afslaget på sin ansøgning. Gæstefløjen.
+Peter Holm, godsforvalter. Ansat til aftenen: en bartender, en tjener på terrassen og en garderobeansvarlig.
+
+Arbejdsværelset har elektronisk lås. Det åbnes med Viktors kort, Mariannes kort, familien Lunds ekstrakort eller et personalekort, og hver indgang registreres. Gæsternes kort åbner det ikke.
+
+Hallen forbinder baren, garderoben og gangen i østfløjen, der fører til arbejdsværelset. Terrassen nås gennem baren.
+
+Aftenen: middag 19.30 til 21.30 (flere hørte Viktor Lund og Selma Akhtar skændes), derefter baren og terrassen. Ifølge personalet hentede Viktor Lund papirer i arbejdsværelset efter middagen og læste dem i dagligstuen, indtil han gik ud på terrassen.` },
+ D_LAB:{ title:"Laboratorierapport: Marianne Lunds glas", text:
+`Genstand: cognacglas fra natbordet i familien Lunds soveværelse. Identificeret af Marianne Lund som det glas, hun skænkede omkring kl. 22.34. Cirka halvdelen af indholdet er tilbage. Fingeraftryk: kun Marianne Lund.
+
+Resultat: ingen digoxin påvist. Påvisningsgrænsen ligger langt under en skadelig dosis.
+
+Karaflen blev testet igen: samme resultat som i rapporten fra gerningsstedet.` },
+ D_KEY_TONIGHT:{ title:"Adgangslog for arbejdsværelset, fredag", text:
+`Døren til arbejdsværelset, østfløjen. Fredag den 25. september.
+Kun indgange. Udgange registreres ikke.
+
+19.24  V. Lund (eget kort)
+21.36  V. Lund (eget kort)
+22.31  Personalekort: P. Holm
+22.34  M. Lund (eget kort)
+22.48  Familien Lunds ekstrakort
+23.07  V. Lund (eget kort)
+23.30  Personalekort: P. Holm` },
+ D_PILLS:{ title:"Viktor Lunds medicin", text:
+`Fundet på badeværelset ved familien Lunds soveværelse: digoxin 250 mikrogram tabletter. 100 tabletter udleveret den 14. september af apoteket i Faaborg. Dosis: én tablet hver morgen.
+
+Taget som ordineret fra den 15. september burde der have været 89 tabletter tilbage om aftenen den 25. september.
+
+Tabletter i glasset: 49.
+
+Marianne Lund forklarer, at glasset har stået på badeværelset, siden det kom i huset. Hun hentede det ikke selv på apoteket.` },
+ D_BAR:{ title:"Bonner fra baren og bartenderens forklaring", text:
+`Bonner fredag aften. Baren åben fra 21.30.
+21.42  J. Brink, gin og tonic
+21.50  S. Akhtar, glas hvidvin
+22.05  M. Lund, danskvand
+22.41  J. Brink, gin og tonic
+23.02  J. Brink, espresso
+
+Bartender: "Hr. Brink sad i baren det meste af aftenen. Omkring kvart i elleve sagde han, at han skulle foretage et opkald, og gik ud i hallen. Han kom tilbage lige før elleve og bestilte en espresso. Fru Akhtar gik ud på terrassen omkring tyve minutter i elleve. Fru Lund forlod baren omkring halv elleve."` },
+ D_HOUSE:{ title:"Husholdningslog: påfyldning af karaflen", text: refillLogDa() },
+ D_KEY_MONTH:{ title:"Arbejdsværelsets dør, de sidste 30 aftener (oversigt)", text:
+`Oversigt fra sikkerhedsfirmaet. Døren til arbejdsværelset, 26. august til 24. september.
+
+Aftener efter kl. 22.00:
+M. Lund: indgange mellem 22.15 og 22.45 på 26 af 30 aftener. Typisk tidspunkt 22.32.
+V. Lund: indgange mellem 22.55 og 23.15 på 28 af 30 aftener.
+Personalekort, P. Holm: mellem 22.24 og 22.41 alle 30 aftener. Igen mellem 23.25 og 23.35 på 27 aftener.
+Familien Lunds ekstrakort: ingen.
+Andre kort: ingen.
+
+Familien Lunds ekstrakort, hele døgnet: én indgang, torsdag den 24. september kl. 14.12. Før det sidst brugt den 3. maj.` },
+ D_EXPENSE:{ title:"Fondens udlægsbilag, september (uddrag)", text:
+`Udlægsholder: Jonas Brink, direktør.
+
+08.09.  Tog København-Odense, forberedelse af bestyrelsesmøde     312 kr.
+14.09.  Taxa, Kragsholm-Faaborg Apotek og retur,
+        "ærinde for V. Lund (recept)"                              486 kr.
+18.09.  Frokostmøde med ekstern revisor. Aflyst af J.B.              0 kr.
+22.09.  Tryk af mødemapper                                       1.940 kr.` },
+ D_EMAIL:{ title:"Usendt udkast på Viktor Lunds computer", text:
+`Gemt fredag den 25. september kl. 18.52. Ikke sendt.
+
+Til: Bestyrelsen, Lund Fonden
+Emne: Et punkt til i morgen
+
+Kære alle
+I morgen vil jeg tilføje ét punkt til dagsordenen: en intern gennemgang af, hvordan vores bevillinger for 2024 og 2025 er blevet afrapporteret. Tallene i vores regnskab stemmer ikke med det, vores partnere siger, de har modtaget. Den 8. september bad jeg Jonas om partnernes opgørelser bag tallene. Jeg har stadig ikke fået dem. Jeg har endnu ikke fortalt medarbejderne, hvad jeg har fundet, fordi jeg vil have, at bestyrelsen hører det først. Behandl det venligst fortroligt indtil da.
+
+Viktor` },
+ D_TERRACE:{ title:"Terrassetjenerens forklaring", text:
+`"Hr. Lund kom ud på terrassen omkring tyve minutter i elleve. Fru Akhtar var der allerede og røg. De talte sammen hele tiden, roligt, slet ikke som ved middagen. Jeg bragte ham et glas vand omkring ti minutter i elleve. Han gik ind igen klokken elleve, måske et minut over. Der kom ingen andre ud, mens de var der."` },
+ D_COAT:{ title:"Nyt bevis: ekstrakortet", text:
+`Lørdag kl. 10.15. Da garderoben ryddes om morgenen, finder den garderobeansvarlige et nøglekort i lommen på Marianne Lunds frakke.
+
+Det er familien Lunds ekstrakort til arbejdsværelset.
+
+Marianne Lunds frakke har hængt i garderoben, siden hun kom hjem kl. 19.10.` },
+ D_CLOAK:{ title:"Den garderobeansvarliges forklaring", text:
+`"Der var travlt indtil omkring halv otte, derefter var der stille. Fru Lund kom aldrig tilbage efter sin frakke. Efter klokken ti kom der kun én person hen til frakkerne: hr. Brink, omkring fem minutter i elleve. Han sagde, han ville have sit halstørklæde, og tog det selv fra stativet. Frakkerne hænger tæt. Jeg så ham ikke gå udenfor."` }
+};
+const BRIDGES = {
+ BC_VALID:{ title:"Gyldig er ikke det samme som holdbar",
+   text:"Et rent glas ser ud til at vise, at karaflen var uskadelig kl. 22.34, så giften må være kommet i senere. Konklusionen følger nødvendigt, men kun hvis præmisserne holder: at det er det glas, hun skænkede, at testen er pålidelig, og at hun skænkede fra karaflen på det tidspunkt, hun siger. Læg også mærke til, hvad der præcis følger: efter hun skænkede, ikke efter hun gik.",
+   research:"I forskningsdesign er deduktion den måde, man udleder forventninger fra en teori på. Udledningen kan være fejlfri og konklusionen alligevel forkert, hvis en præmis svigter, for eksempel hvordan et begreb er operationaliseret eller målt.",
+   question:"Hvilken præmis bag denne deduktion ville I undersøge først, og hvordan?" },
+ BC_INDUCT:{ title:"Tredive aftener, ét mønster",
+   text:"30 aftener i træk blev karaflen fyldt op mellem 22.24 og 22.41. At slutte, at den også blev fyldt op omkring 22.30 den sidste aften, er induktion: en generalisering fra observerede tilfælde til et, man ikke har observeret. Den kan være stærk, men aldrig sikker.",
+   research:"Samme bevægelse ligger bag generalisering fra en stikprøve eller fra cases. Styrken afhænger af, hvor mange tilfælde der er, hvordan de er udvalgt, og om det nye tilfælde tilhører samme population.",
+   question:"Var den sidste aften en almindelig aften i den forstand, der betyder noget her? Hvad ville gøre mønstret til en dårlig rettesnor?" },
+ BC_ABDUCT:{ title:"Mere end én forklaring",
+   text:"Peirce beskrev abduktion som den proces, hvor man danner en forklarende hypotese, og som den eneste slutning, der introducerer en ny idé (Collected Papers 5.171\u2013172). Den er også den svageste: flere hypoteser kan gøre det samme overraskende faktum ikke-overraskende.",
+   research:"Kvalitative forskere ræsonnerer abduktivt, når et fund ikke passer med eksisterende teori (Timmermans og Tavory 2012). Designspørgsmålet er, hvordan man vælger mellem konkurrerende forklaringer, og det kræver, at man finder ud af, hvor de forudsiger forskellige ting.",
+   question:"Nævn én observation, hvor jeres to hypoteser forudsiger forskellige ting." },
+ BC_CONFIRM:{ title:"Beviser, der passer for godt",
+   text:"Ekstrakortet dukker op i Marianne Lunds frakke. Hvis I allerede mistænkte hende, føles det som en bekræftelse. Før I accepterer det, så spørg, hvad der ellers måtte være sandt, hvis hun lagde det der, og hvem der ellers kunne have gjort det.",
+   research:"Bekræftelsesbias i analyse betyder, at man vægter beviser, der passer med ens nuværende forklaring, højere end beviser, der ikke gør. Designsvaret er at udlede forudsigelser på forhånd og lede efter tilfælde, der kan modsige dem.",
+   question:"Hvis Marianne lagde kortet der, hvad burde I så også finde? Finder I det?" }
+};
+const EXERCISES = {
+ A:{ fact:"I én dansk kommune blev antallet af borgere, der deltog i offentlige høringer om lokalplaner, fordoblet fra det ene år til det næste. I nabokommunerne var deltagelsen uændret.",
+   items:[
+    { text:"Deltagelsen steg i hvert af de tolv distrikter, vi undersøgte. De tre distrikter, vi ikke har undersøgt, ligner dem, så deltagelsen steg også der.", answer:"induction" },
+    { text:"Det nye online bookingsystem blev lanceret i maj. Stigningen i deltagelsen begyndte i februar. Bookingsystemet kan ikke have sat stigningen i gang.", answer:"deduction" },
+    { text:"Deltagelsen blev fordoblet i den eneste kommune med et omstridt vindmølleprojekt. Striden er det, der fik nye borgere til at møde op til høringerne.", answer:"abduction" },
+    { text:"Alle høringer, som kommunen holder, bliver annonceret i lokalavisen. Mødet i marts blev ikke annonceret i lokalavisen. Så det var ikke en høring holdt af kommunen.", answer:"deduction" },
+    { text:"I hvert af de sidste otte år med et kontroversielt projekt på dagsordenen steg deltagelsen. Næste års dagsorden har et kontroversielt projekt, så deltagelsen vil stige igen.", answer:"induction" },
+    { text:"De fleste af de nye deltagere kom fra ét boligområde. Den mest sandsynlige forklaring er, at boligforeningen opfordrede sine beboere til at deltage.", answer:"abduction" } ] },
+ B:{ fact:"På ét universitet blev andelen af førsteårsstuderende, der faldt fra en uddannelse, halveret på et enkelt år. På sammenlignelige uddannelser andre steder var frafaldet uændret.",
+   items:[
+    { text:"Frafaldet faldt på alle seks uddannelser, vi undersøgte, som indførte mentorordninger. De andre uddannelser, der indførte mentorordninger, oplevede også et fald.", answer:"induction" },
+    { text:"Mentorordningen startede i forårssemestret. Faldet i frafald kunne allerede ses efteråret før. Mentorordningen kan ikke have sat faldet i gang.", answer:"deduction" },
+    { text:"Faldet i frafald kom det år, hvor uddannelsen flyttede al undervisning over i små hold. De små hold er det, der fik de studerende til at blive.", answer:"abduction" },
+    { text:"Alle studerende, der dumper to eksamener, skal til samtale med en studievejleder. Sara har ikke været til samtale med en studievejleder. Så Sara har ikke dumpet to eksamener.", answer:"deduction" },
+    { text:"Hvert år, hvor uddannelsen holdt introlejr, lå frafaldet under gennemsnittet. Lejren holdes igen næste år, så frafaldet vil igen ligge under gennemsnittet.", answer:"induction" },
+    { text:"De fleste studerende, der blev, nævnte deres studiegruppe. Den mest sandsynlige forklaring er, at studiegrupperne gav dem en følelse af at høre til.", answer:"abduction" } ] },
+ C:{ fact:"På én regional busrute steg antallet af passagerer med 30 procent på et år. På de andre ruter i regionen var passagertallet uændret.",
+   items:[
+    { text:"Passagertallet steg på hver af de ti afgange, vi talte. Det steg også på de afgange, vi ikke talte.", answer:"induction" },
+    { text:"Takstnedsættelsen trådte i kraft i oktober. Passagertallet var allerede steget i august. Takstnedsættelsen kan ikke have sat stigningen i gang.", answer:"deduction" },
+    { text:"Stigningen begyndte den måned, hvor en stor arbejdsplads flyttede sine kontorer ud til ruten. Flytningen er det, der bragte de nye passagerer.", answer:"abduction" },
+    { text:"Alle busser på ruten har en billetlæser. Tirsdagsbussen havde ingen billetlæser. Så tirsdagsbussen kørte ikke på ruten.", answer:"deduction" },
+    { text:"Hver gang den parallelle vej blev lukket for reparation, steg passagertallet. Vejen lukker igen til foråret, så passagertallet vil stige der.", answer:"induction" },
+    { text:"Mange af de nye passagerer var studerende. Den mest sandsynlige forklaring er, at campus' nye skema gjorde bussen til den hurtigste vej til undervisningen.", answer:"abduction" } ] }
+};
+const EXPERIENCE = [
+  { id:"distinguish", text:"Spillet hjalp os med at forstå forskellen på abduktion, deduktion og induktion." },
+  { id:"hypotheses", text:"Spillet hjalp os med at skrive hypoteser, der kunne testes." },
+  { id:"characters", text:"Personerne var overbevisende nok til, at det var værd at afhøre dem." }
+];
+const CHARACTERS = {
+ marianne:{ role:"Viktors kone, 58",
+  deflections:["Jeg kan ikke se, hvad det har med noget at gøre.","Det ved jeg ikke, og jeg vil ikke gætte.","Det må I spørge en anden om."],
+  topics:[
+   { label:"Aftenen i arbejdsværelset", keywords:["arbejdsværelse","cognac","karaffel","22.34","drink","glas","skænk","vane","bog","halv elleve","soveværelse","aften"],
+     line:"Jeg gik ind i arbejdsværelset lidt over halv elleve, som jeg gør de fleste aftener. Jeg skænkede en lille cognac fra karaflen, tog min bog og gik i seng. Den smagte, som den plejer. Glasset står stadig på mit natbord, hvis I vil have det.",
+     testimony:"Marianne Lund: hun går ind i arbejdsværelset de fleste aftener omkring halv elleve. I går aftes omkring kl. 22.34 skænkede hun en lille cognac fra karaflen og tog den med i seng." },
+   { label:"Ægteskabet", keywords:["skilsmisse","ægteskab","ægtepagt","arv","mand","forhold","penge","testamente","kærlighed","kone"],
+     line:"Fint. Jeg søgte om skilsmisse i august. Med vores ægtepagt ville jeg være gået derfra med meget lidt, og nu arver jeg. Jeg kan godt se, hvordan det ser ud. Det er derfor, jeg ikke nævnte det.",
+     testimony:"Marianne Lund: hun søgte om skilsmisse i august. Med ægtepagten ville hun have fået meget lidt; som enke arver hun.",
+     locked:{ line:"Vi var gift i 31 år. Langt og indviklet, som de fleste lange ægteskaber. Er det virkelig det, I vil bruge jeres tid på?" } },
+   { label:"Hans medicin", keywords:["pille","tablet","medicin","digoxin","hjerte","recept","apotek","pilleglas"],
+     line:"Han tog én tablet hver morgen til kaffen. Glasset stod på vores badeværelse. Jeg hentede aldrig hans recepter. Han havde folk til det; jeg ved ikke, hvem der gjorde det denne gang." },
+   { label:"Nøglekortene", keywords:["kort","nøglekort","ekstrakort","lomme","frakke","garderobe","adgang"],
+     line:"Jeg hængte den frakke i garderoben ti minutter over syv og har ikke rørt den siden. Jeg har mit eget kort, hvorfor i alverden skulle jeg bruge ekstrakortet? Nogen har lagt det der. Spørg jer selv hvem.",
+     testimony:"Marianne Lund: hun har ikke rørt sin frakke siden kl. 19.10, har sit eget kort og siger, at nogen har plantet ekstrakortet hos hende.",
+     locked:{ line:"Jeg har mit eget kort. Der er et ekstrakort et sted, på godskontoret tror jeg. Det ved Peter." } },
+   { label:"De andre", keywords:["andre","jonas","brink","direktør","selma","akhtar","peter","holm","hvem","mistænk","fjende"],
+     line:"Selma lavede en scene ved middagen, men Viktor virkede roligere senere. Jonas har været meget opmærksom over for mig i denne uge. Viktor havde været kølig over for ham i ugevis, jeg fandt aldrig ud af hvorfor. Peter har været hos os i tolv år." }
+  ] },
+ peter:{ role:"Godsforvalter, 51",
+  deflections:["Undskyld, det kan jeg virkelig ikke sige.","Det ved jeg desværre ikke noget om.","Tilgiv mig, det havde jeg ikke noget med at gøre."],
+  topics:[
+   { label:"Genopfyldningen", keywords:["genopfyld","fyld","karaffel","cognac","husholdningslog","log","22.00","klokken ti","flaske","drinks"],
+     line:"...Godt så. Det var halv elleve, ikke ti. Jeg skrev ti, fordi... I omkring et år har jeg hældt billigere cognac i den karaffel og solgt hr. Lunds gode flasker. Da jeg hørte ordet gift, gik jeg i panik. Men jeg kom ikke andet i den. Intet.",
+     testimony:"Peter Holm (ændret forklaring): han fyldte karaflen op omkring kl. 22.30 og skrev 22.00 i loggen. Han indrømmer, at han har erstattet familien Lunds dyre cognac med en billigere og solgt de originale flasker.",
+     locked:{ line:"Klokken ti, som altid. Det står i husholdningsloggen. Jeg har gjort det på samme måde i tolv år.",
+       testimony:"Peter Holm: han fyldte karaflen op kl. 22.00, som altid, og skrev det i husholdningsloggen." } },
+   { label:"Da hr. Lund blev fundet", keywords:["fandt","fundet","finde","aftente","23.30","ambulance","død","opdag","halv tolv"],
+     line:"Jeg kom med hans te klokken halv tolv, som altid. Han sad sammensunket i lænestolen med glasset ved siden af sig, grå i ansigtet. Han kunne næsten ikke tale. Jeg ringede efter ambulancen kl. 23.33 og gik op til fru Lund. I morges fik vi at vide, at han døde i nat." },
+   { label:"Ekstrakortet", keywords:["kort","nøglekort","ekstrakort","adgang","kontor","nøgle"],
+     line:"Hr. Lund tog ekstrakortet fra godskontoret i torsdags. Jeg tror, han gav det til hr. Brink, som bar kasserne med mødemapper ind i arbejdsværelset den eftermiddag. Jeg så ham ikke give det, skal jeg sige. Men det var sådan, jeg forstod det.",
+     testimony:"Peter Holm: i torsdags tog Viktor ekstrakortet fra godskontoret. Peter tror, at Viktor gav det til Jonas Brink, som bar mødemapper ind i arbejdsværelset, men han så ikke selve overdragelsen.",
+     locked:{ line:"Arbejdsværelset kræver et familiekort eller et personalekort. Der er et ekstrakort, som normalt ligger på godskontoret. Det må jeg lige undersøge." } },
+   { label:"De andre", keywords:["andre","jonas","brink","selma","akhtar","marianne","fru lund","hvem","mistænk"],
+     line:"Det er ikke min plads. Hr. og fru Lund havde ikke stået hinanden nær i nogen tid. Fru Akhtar hævede stemmen ved middagen. Hr. Brink har haft travlt med mapperne hele ugen." }
+  ] },
+ selma:{ role:"Forsker, 39",
+  deflections:["Det er spekulation, og jeg vil ikke bidrage til den.","Det aner jeg ikke. Jeg var gæst, ikke beboer.","Hvorfor skulle jeg vide det?"],
+  topics:[
+   { label:"Terrassen", keywords:["terrasse","efter middagen","hvor var du","ryg","udenfor","22.4","aften","alibi","elleve"],
+     line:"Jeg gik ud for at ryge omkring tyve minutter i elleve. Viktor kom ud et par minutter efter, og vi talte sammen til klokken elleve. Tjeneren bragte ham vand. Så gik han ind, og jeg røg min cigaret færdig.",
+     testimony:"Selma Akhtar: hun var på terrassen med Viktor Lund fra omkring kl. 22.40 til omkring kl. 23.00." },
+   { label:"Hvad Viktor sagde", keywords:["talte","sagde","samtale","snakke","penge","medarbejder","i morgen","møde"],
+     line:"Han undskyldte for middagen og bad mig søge igen. Han var fraværende. På et tidspunkt sagde han, at han havde fundet ud af, hvor pengene var blevet af, og at i morgen ville blive ubehagelig for en af hans medarbejdere. Han sagde ikke hvem.",
+     testimony:"Selma Akhtar: på terrassen sagde Viktor, at han havde fundet ud af, hvor pengene var blevet af, og at næste dag ville blive ubehagelig for en af hans medarbejdere.",
+     locked:{ line:"Han undskyldte for middagen. Vi talte om min ansøgning. Resten var privat, og jeg vil gerne vide, hvorfor det betyder noget, før jeg gentager det." } },
+   { label:"Skænderiet ved middagen", keywords:["skænd","middag","afslag","ansøgning","vred","motiv","bevilling","råb"],
+     line:"Ja, jeg råbte. Afslaget var urimeligt, og det sagde jeg. Men en time senere bad han mig søge igen. Jeg havde al mulig grund til at ønske ham i live.",
+     testimony:"Selma Akhtar: indrømmer skænderiet ved middagen om hendes afviste ansøgning, men siger, at Viktor senere opfordrede hende til at søge igen." },
+   { label:"De andre", keywords:["andre","jonas","brink","marianne","peter","hvem","mistænk","direktør"],
+     line:"Jonas behandlede min ansøgning og var underligt undvigende om budgettallene. Marianne virkede fraværende hele aftenen. Forvalteren lagde jeg næsten ikke mærke til." }
+  ] },
+ jonas:{ role:"Fondens direktør, 41",
+  deflections:["Jeg hjælper gerne, men det ved jeg virkelig ikke.","Godt spørgsmål. Jeg ville ønske, jeg kunne svare.","Det ligger uden for, hvad jeg så, desværre."],
+  topics:[
+   { label:"Hans aften", keywords:["hvor var du","bar","aften","efter middagen","opkald","ringe","søster","alibi","22.4"],
+     line:"I baren, hele aftenen. Jeg gik ud én gang for at ringe til min søster, omkring elleve, måske lidt før. Et par minutter, ikke mere.",
+     testimony:"Jonas Brink: han var i baren hele aftenen, bortset fra at han gik kort ud for at ringe til sin søster omkring kl. elleve." },
+   { label:"Ekstrakortet", keywords:["kort","nøglekort","ekstrakort","adgang","østfløj","arbejdsværelse"],
+     line:"Ekstrakortet? Det havde Viktor selv. Hvis nogen siger noget andet, tager de fejl. Jeg bar mapper, det var det hele.",
+     testimony:"Jonas Brink: nægter nogensinde at have haft ekstrakortet og siger, at Viktor selv havde det." },
+   { label:"Recepten", keywords:["pille","tablet","medicin","digoxin","recept","apotek","hjerte","taxa","ærinde"],
+     line:"Ja, jeg hentede den. Jeg løb ærinder for Viktor hele tiden. Jeg gav ham posen uåbnet.",
+     testimony:"Jonas Brink: indrømmer, at han hentede Viktors recept den 14. september, og siger, at han afleverede den uåbnet.",
+     locked:{ line:"Alle vidste, at han havde det med hjertet. Men hans medicin var hans egen sag." } },
+   { label:"Halstørklædet", keywords:["halstørklæde","tørklæde","garderobe","frakke","garderobeansvarlig"],
+     line:"Jeg hentede mit halstørklæde for at få lidt luft på terrassen. Så besluttede jeg, at det var for koldt, og gik tilbage til baren. Næppe en forbrydelse.",
+     testimony:"Jonas Brink: han hentede sit halstørklæde for at gå ud på terrassen, men besluttede, at det var for koldt, og gik tilbage til baren.",
+     locked:{ line:"Garderoben? Det kan jeg ikke huske. Måske på et tidspunkt." } },
+   { label:"Fondens økonomi", keywords:["revision","gennemgang","mail","penge","rapport","tallene","svindel","regnskab","bestyrelse","dagsorden","økonomi"],
+     line:"En gennemgang? Det nævnte han aldrig. Tallene er komplicerede, og enhver uoverensstemmelse vil have en uskyldig forklaring. Ærligt talt ville jeg gerne have fået det at vide.",
+     testimony:"Jonas Brink: siger, at han intet vidste om Viktors planlagte gennemgang af afrapporteringen, og at enhver uoverensstemmelse har en uskyldig forklaring.",
+     locked:{ line:"Vores økonomi er i orden. I morgen var et rutinemøde." } },
+   { label:"De andre", keywords:["andre","marianne","fru lund","kone","peter","holm","selma","akhtar","hvem","mistænk","tror"],
+     line:"Det burde jeg ikke sige. Marianne havde vist søgt om skilsmisse. Og Peter står for alle drinks i det hus. Selma råbte ad ham, selvfølgelig. Jeg anklager ikke nogen." }
+  ] }
+};
+return { OPENING, DOCS, BRIDGES, EXERCISES, EXPERIENCE, CHARACTERS };
+})();
+
+function buildContent(lang){
+  const E = CONTENT_EN;
+  E.CHARACTERS.forEach(c => c.topics.forEach((tp, i) => tp.id = c.id + "-" + i));
+  if (lang !== "da") return E;
+  const D = CONTENT_DA;
+  const CH = E.CHARACTERS.map(c => {
+    const d = D.CHARACTERS[c.id];
+    return { ...c, role:d.role, deflections:d.deflections, topics:c.topics.map((tp, i) => {
+      const dt = d.topics[i];
+      const out = { ...tp, label:dt.label, keywords:[...dt.keywords, ...tp.keywords], line:dt.line };
+      if (tp.testimony) out.testimony = { id:tp.testimony.id, text:dt.testimony };
+      if (tp.locked) out.locked = { ...tp.locked, line:dt.locked?.line || tp.locked.line,
+        ...(tp.locked.testimony ? { testimony:{ id:tp.locked.testimony.id, text:dt.locked.testimony } } : {}) };
+      return out; }) };
+  });
+  return { OPENING:D.OPENING,
+           DOCS:E.DOCS.map(d => ({ ...d, title:D.DOCS[d.id].title, text:D.DOCS[d.id].text })),
+           BRIDGES:Object.fromEntries(Object.entries(E.BRIDGES).map(([k, b]) => [k, { ...b, ...D.BRIDGES[k] }])),
+           EXERCISES:D.EXERCISES, EXPERIENCE:D.EXPERIENCE, CHARACTERS:CH };
+}
+let OPENING, DOCS, BRIDGES, EXERCISES, EXPERIENCE, CHARACTERS;
+let LANG = (() => { const q = new URLSearchParams(location.search).get("lang"); return q === "da" || q === "en" ? q : null; })();
+function setLang(l){
+  LANG = l === "da" ? "da" : "en";
+  ({ OPENING, DOCS, BRIDGES, EXERCISES, EXPERIENCE, CHARACTERS } = buildContent(LANG));
+  document.documentElement.lang = LANG;
+}
+
+/* ---------- interface text in English and Danish ---------- */
+const UI = {
+ en:{
+  lede:"A murder at a manor on Funen, and a rule: you may only ask for evidence by reasoning your way to it.",
+  howTitle:"How the game works",
+  how1:'Read the scene report. Find what is surprising and propose an explanation that names a person, a motive and a mechanism: how and when it was done. That is <span class="t-hyp kind">abduction</span>.',
+  how2:'Work out what else must be true if the explanation is right. That is <span class="t-pred kind">deduction</span>. A hypothesis plus a prediction releases new files.',
+  how3:'Check predictions against the evidence and record what you found. Generalising from patterns in the evidence is <span class="t-test kind">induction</span>.',
+  how4:"Revise, add rival explanations and repeat. A second hypothesis and a recorded test release the rest of the files.",
+  howPeople:"Besides the case files, you can question the four people involved. They answer what you ask, and their statements count as evidence.",
+  howAssess:"You are assessed on the quality of your reasoning, not on naming the right person. A careful argument that turns out wrong can beat a lucky guess.",
+  howExercises:"You start with a short warm-up exercise of about five minutes and finish with a similar one after your final argument. Neither is graded.",
+  howGuide:"The game then opens on the <b>Method guide</b>. Read it as a team before you open the case files: it shows how to write a hypothesis you can test and how the game connects to research design.",
+  teamName:"Team name", teamPh:"e.g. Team 7", teamHint:"Use a team name, not your own names.", teamSize:"How many of you are playing today?",
+  constQ:"Are you playing as your project group?", constProject:"Yes, as our project group (or as a student writing alone)", constTemp:"No, as a group put together for today",
+  pgSize:"How many are in your project group in total?", pgHint:"Count everyone in the project group, including those who are not here today. Write 1 if you write your project alone. If you are a group for today, give the size of your own project group.",
+  errConst:"Say whether you are playing as your project group.", errPg:"Choose how many are in your project group in total.", errPgSmall:"The project group cannot be smaller than the number playing today.",
+  choose:"Choose...", section:"Your class or stream", modeQ:"How the characters answer",
+  modeAiTitle:"AI characters in this browser", modeAiHint:"Downloads a small language model (about 1 to 2 GB) the first time. After that it is cached.",
+  modeAiNoGpu:"This browser has no WebGPU support. Use a recent Chrome or Edge, or choose scripted characters.",
+  modeScrTitle:"Scripted characters", modeScrHint:"Fixed answers triggered by what you ask about. No download. Useful for testing or older laptops.",
+  startBtn:"Start the investigation", modelsLoading:"Loading the list of models...", model:"Model", aboutGb:"about {0} GB",
+  modelHint:"The first option usually gives the best characters. Pick a 1B or 1.5B model for weaker laptops.",
+  libFail:"The in-browser AI library could not be loaded here ({0}). Choose scripted characters instead.",
+  retryStorage:"Download failed with the browser cache. Retrying with a different storage method...",
+  fail0:"The model could not start ({0}).",
+  failNet:"This laptop cannot reach huggingface.co, where the model is stored. The network, a VPN or an ad blocker is probably blocking it. Try another network, such as a phone hotspot, or switch off the blocker for this page.",
+  failQuota:"The browser has too little storage for the model. Free up disk space, and do not use a private window.",
+  failOther:"The download was interrupted. Check that you are not in a private window, that the laptop has a few GB of free disk space, and try again. A smaller model may also help.",
+  failScripted:"You can play with scripted characters in the meantime.", checking:"Checking what went wrong...",
+  failGpu:"This laptop's browser supports WebGPU in principle, but found no graphics card it can use for it. Check that graphics acceleration is switched on in the browser settings, update the browser and the graphics driver, and close remote-desktop or virtual-machine sessions. Opening chrome://gpu (or edge://gpu) shows whether WebGPU is hardware accelerated.",
+  modeAiNoAdapter:"The browser supports WebGPU, but found no graphics card it can use for it on this laptop. Choose scripted characters, or use another laptop. Switching on graphics acceleration in the browser settings sometimes helps.",
+  modeAiChecking:"Checking whether this laptop can run the model...",
+  modelHintWeak:"This laptop seems to have built-in graphics, so a small, faster model is selected. A speed test after loading shows whether it is fast enough.",
+  speedTesting:"Testing how fast the characters will answer on this laptop...",
+  speedOk:"Speed test done: answers should take about {0} seconds.",
+  speedSlow:"Answers would take about {0} seconds each on this laptop. That is too slow to play well in the time you have.",
+  speedSmaller:"Try the smaller model ({0})", speedScripted:"Use scripted characters", speedContinue:"Continue with AI anyway",
+  modeAiMobile:"On phones and tablets the AI characters often give unreadable answers, so scripted characters are selected. Use a laptop for AI characters.",
+  aiGarbled:"The AI model keeps producing unreadable text on this device, so the characters now use scripted answers. Nothing you have done is lost. Use a laptop for AI characters.",
+  modeScriptedOff:"Scripted characters (AI switched off)",
+  errTeam:"Enter a team name first.", errSize:"Choose how many you are in the team.", errSection:"Choose your class or stream.",
+  errMode:"Choose how the characters answer.", errNoModel:"No model is available. Choose scripted characters.",
+  modeAi:"AI characters", modeAiOff:"AI not loaded", modeScripted:"Scripted characters", newGame:"Start a new game",
+  tabGuide:"Method guide", tabFiles:"Case files", tabPeople:"Interviews", tabLog:"Inquiry log", tabFinal:"Final argument",
+  tabInv:"Investigation", openLog:"Inquiry log", closeLog:"Close the inquiry log",
+  startHintPeople:"Question the four people in the Interviews panel: they know things that are in no file.",
+  helpTitle:"How the investigation screen works", helpHide:"Hide",
+  helpEvidence:"<b>Evidence</b> (left): the case files. Two are open from the start. The rest unlock as your reasoning in the inquiry log gets further.",
+  helpInterviews:"<b>Interviews</b> (right): choose a person and ask questions in your own words, or click a topic to get started. People only tell you what you ask about, and some only open up once you have found certain evidence.",
+  helpLog:"<b>Inquiry log</b>: write down every hypothesis, prediction and test. It releases new files and is what you are assessed on. On a wide screen it is on the right; otherwise open it with the Inquiry log button at the top.",
+  helpNotes:"<b>Statements</b> from interviews are collected under the interviews, so you can use them as evidence in your tests.",
+  helpCode:"<b>Code</b>: your lecturer will give you a code during the session. Enter it under the evidence list.",
+  helpFinal:"<b>Final argument</b>: when you are ready, or when time is nearly up, submit your conclusion in the Final argument tab.",
+  reloadMsg:"The AI model is not loaded, so characters use scripted answers.", loadModel:"Load {0}",
+  backFiles:"Back to case files", startHere:"Start here", surprising:"The surprising fact.",
+  startHint:"Explain it in your inquiry log. Each file you unlock depends on how far your reasoning has got.",
+  evidence:"Evidence", read:"Read", available:"Available", locked:"Locked: ", notRead:"Not read yet",
+  codePh:"Code from your lecturer", enterCode:"Enter code", codeWrong:"That code is not right. Check it with your lecturer.",
+  statements:"Statements from interviews", statementsEmpty:"Nothing yet. Statements appear here when a witness tells you something that matters.",
+  unverified:"Unverified details", unverifiedHint:"Things people mentioned in passing. They are not evidence unless you can connect them to something that is.", none:"None yet.",
+  need1Lock:"Record a hypothesis and a prediction that follows from it.", need2Lock:"Record a second hypothesis and at least one test of a prediction.", needEvent:"Released during the session.",
+  interviews:"Interviews", askPrompt:"Ask {0} a question. Be specific: people answer what they are asked.", qPh:"Your question", askBtn:"Ask",
+  aiNote:"Answers are generated on this laptop. Characters can be wrong, evasive or lying, as people are.",
+  scriptedNote:"Scripted mode: characters respond to what your question is about. The chips show topics each person can talk about.",
+  chipQ:"Tell me about {0}.",
+  logTitle:"Inquiry log", logIntro:"Every step of your reasoning goes here. It is what you are assessed on.", toGuide:"How to write a testable hypothesis",
+  need0:"Next files: record a hypothesis, then a prediction linked to it.",
+  need1:(h, t) => "Next files: " + [h ? "a second hypothesis" : "", t ? "a test of one of your predictions" : ""].filter(Boolean).join(" and ") + ".",
+  need2:"All regular files are released.", addHyp:"+ Hypothesis", addPred:"+ Prediction", addTest:"+ Test",
+  logEmpty:"No entries yet. Start with a hypothesis that would explain the surprising fact.",
+  kHyp:"Hypothesis", kPred:"Prediction", kTest:"Test", iAbd:"abduction", iDed:"deduction", iInd:"induction",
+  t_abduction:"Abduction", t_deduction:"Deduction", t_induction:"Induction",
+  predPh:"e.g. an entry in a log, a gap in an alibi, a missing object", testPh:"What did you find when you checked, and what does it show?",
+  followsFrom:"Follows from", needHypFirst:"Record a hypothesis first. A prediction has to follow from one.", testsPred:"Tests prediction",
+  evUsed:"Evidence used", evEmpty:"Read some files or interview someone first.", result:"Result",
+  out_supports:"Supports the prediction", out_contradicts:"Contradicts the prediction", out_inconclusive:"Inconclusive",
+  os_supports:"supports", os_contradicts:"contradicts", os_inconclusive:"inconclusive",
+  needPredFirst:"Record a prediction first. A test checks a prediction.", phHyp:"Your hypothesis", phPred:"Your prediction", phTest:"What did you find?",
+  who:"Who", whoMulti:"More than one person", whoOther:"Someone else", motive:"Motive", motivePh:"Why would they do it?",
+  means:"Means", meansPh:"Where did the poison come from, and how did they get hold of it?", opp:"Opportunity", oppPh:"When and how did they get to the decanter?",
+  explains:"What it explains", explainsPh:"Why is the surprising fact no longer surprising if this is true?",
+  hypHint:"The motive makes a hypothesis plausible. The means and the opportunity make it testable, so those two are required.",
+  predQ:"If the hypothesis is true, we should find...", whereQ:"Where would it show?",
+  src_record:"A document or record", src_witness:"A witness statement", src_pattern:"A pattern over time (a log, a routine)", src_physical:"Physical evidence",
+  doubtQ:"If we do not find it, what is in doubt?", doubtPh:"The whole hypothesis, or one part of it: motive, means or opportunity?",
+  discLabel:"This prediction tells two of our hypotheses apart: they expect different things here.", testQ:"What did you find?",
+  patternQ:"Does this rest on a pattern, such as a routine, a log over many days or several similar cases? If so, how far can it be trusted?", patternPh:"Leave empty if not",
+  addToLog:"Add to log", cancel:"Cancel", statement:"statement", distinguishes:"distinguishes hypotheses", statusOf:"Status of {0}",
+  st_open:"open", st_favoured:"favoured", st_rejected:"rejected", from:"from", tests:"tests", evidenceLbl:"Evidence: ",
+  lblMotive:"Motive: ", lblMeans:"Means: ", lblOpp:"Opportunity: ", lblExplains:"Explains: ", lblWhere:"Where: ", lblNotFound:"If not found: ", lblPattern:"Pattern relied on: ",
+  errWho:"Name a person, or choose one of the other options.", errMeansOpp:"Describe the means and the opportunity. Those are what your predictions will come from.",
+  errSentence:"Write at least a sentence.", released:"New files released in Case files.",
+  bridgeHint:"Discuss it as a team and write your answer. You can continue once you have written a sentence.", bridgeSave:"Save and continue",
+  postIntro:"One last exercise of about five minutes, in the same format as the warm-up but with a new case, and three short questions about the game. Answer as a team.",
+  submittedTitle:"Final argument submitted", submittedP:"Your lecturer will reveal the solution in the plenary. Until then, keep your reasoning to your own team.",
+  researchAgreed:"Research use: your team agreed.", researchDeclined:"Research use: your team declined.",
+  sentToForm:"Your answers were also sent to your lecturer's collection form.",
+  fileHint:"If your lecturer asks for a file, download it here. If downloading does not work, copy the text below.",
+  download:"Download file", copyText:"Copy text", copied:"Copied.", copyManual:"Select all and copy manually.",
+  finalTitle:"Final argument", finalHint:"This is assessed on how well the reasoning holds up, including how honestly you state what you cannot show.",
+  accuseQ:"Who do you accuse?", undecided:"Undecided",
+  fHyp:"Your explanation", fHypHint:"Abduction: what happened, and why does it make the surprising fact unsurprising?",
+  fDed:"What follows if it is true", fDedHint:"Deduction: the predictions you derived, and the premises they rest on.",
+  fInd:"How the evidence tested it", fIndHint:"Induction and testing: which evidence you checked, what patterns you relied on, and how far they can be trusted.",
+  fAlt:"Rival explanations", fAltHint:"Which alternatives did you consider, and what evidence tells them apart from yours?",
+  fUnc:"What remains uncertain", fUncHint:"What would change your mind? What could you not rule out?",
+  confidence:"Confidence", conf1:"1: a guess", conf2:"2: weak", conf3:"3: moderate", conf4:"4: strong", conf5:"5: beyond reasonable doubt",
+  consentLegend:"Research use of your answers",
+  consentText:"Your lecturer may use data from this game in a research article about teaching research methods: your inquiry log, the two exercises and your final argument, without any names. Your answer has no effect on your assessment, and your submission is used in the plenary either way. Choose yes only if every member of the team agrees. To withdraw later, contact {0}.",
+  consentYes:"Yes, every member of our team agrees that our answers may be used for research.", consentNo:"No, our answers should not be used for research.",
+  submitBtn:"Submit final argument", errAccuse:"Choose who you accuse, or Undecided.", errSections:"Write something in every section, even if it is short.",
+  errConsent:"Answer the question about research use, yes or no.", confirmSubmit:"Submit your final argument? You cannot change it afterwards.",
+  likertQ:"How much do you agree? (1 = not at all, 5 = completely)", commentQ:"Anything we should change in the game? (optional)", agreement:"Agreement",
+  exExpl:"Propose an explanation. Who acted, and how did their actions produce the outcome?",
+  exP1:"If your explanation is true, what else should we be able to observe? Give a first observation.", exP2:"A second observation.",
+  exRival:"Name a rival explanation.", exDisc:"Which observation would tell your explanation and the rival apart?",
+  classifyQ:"What kind of reasoning is each statement? The conclusion is the last sentence.", reasoningType:"Type of reasoning",
+  saveGoGuide:"Save and go to the method guide", saveEx:"Save the exercise", warmTitle:"Warm-up for {0}",
+  warmText:"Before the case, a short exercise of about five minutes. It is not graded. Answer as a team, without looking anything up, as well as you can right now. After your final argument you will do a similar one, so you and your lecturer can see what changed.",
+  exMissing:"Answer every part, even briefly.", feedbackTitle:"The classification, with answers", youHad:" (you had this)", youChose:" (you chose {0})",
+  feedbackNote:"Deduction: the conclusion follows necessarily from the premises, even when a premise is left unsaid (such as \u201ca cause cannot come after its effect\u201d). Induction: from observed cases to unobserved ones, or to the future. Abduction: from a surprising observation to the explanation that would make it unsurprising.",
+  rtTitle:"Follow-up exercise", rtText:"This short exercise, about five minutes, is done individually. It is not graded. It shows what you remember of abduction, deduction and induction some weeks after the game.",
+  rtTeam:"Your team name from the game (optional)",
+  rtConsentText:"Your lecturer may use your answers, without your name, in a research article about teaching research methods. Your answer has no effect on your assessment. To withdraw later, contact {0}.",
+  rtYes:"Yes, my answers may be used for research.", rtNo:"No, my answers should not be used for research.",
+  savedThanks:"Saved. Thank you.", rtSent:"Your answers were sent to your lecturer. ", rtFile:"If your lecturer asks for a file, download it here.",
+  ngTitle:"Start a new game?",
+  ngText:(team, sub) => `This deletes everything ${team} has done on this laptop: the inquiry log, notes, interviews, bridge-card answers${sub ? " and the submitted final argument" : ""}. It cannot be undone.`,
+  ngSubmitted:"<b>You have submitted a final argument.</b> If your lecturer needs the file, download it from the Final argument tab first.",
+  ngType:"Type the team name, {0}, to confirm", ngYes:"Delete and start again", ngNo:"Keep playing",
+  timeUp:"Time is up. Submit your final argument now.", finalCall:"Start writing your final argument. You have about {0} minutes.", of:"of",
+  answerIn:"English"
+ },
+ da:{
+  lede:"Et mord på et gods på Fyn, og én regel: I må kun få adgang til beviser ved at ræsonnere jer frem til dem.",
+  howTitle:"Sådan fungerer spillet",
+  how1:'Læs rapporten fra gerningsstedet. Find det, der er overraskende, og foreslå en forklaring, der nævner en person, et motiv og en mekanisme: hvordan og hvornår det blev gjort. Det er <span class="t-hyp kind">abduktion</span>.',
+  how2:'Find ud af, hvad der også må være sandt, hvis forklaringen holder. Det er <span class="t-pred kind">deduktion</span>. En hypotese plus en forudsigelse låser nye filer op.',
+  how3:'Tjek forudsigelserne mod beviserne, og skriv ned, hvad I fandt. At generalisere ud fra mønstre i beviserne er <span class="t-test kind">induktion</span>.',
+  how4:"Revidér, tilføj konkurrerende forklaringer, og gentag. En anden hypotese og en registreret test låser resten af filerne op.",
+  howPeople:"Ud over sagsakterne kan I afhøre de fire involverede personer. De svarer på det, I spørger om, og deres forklaringer tæller som beviser.",
+  howAssess:"I bliver vurderet på kvaliteten af jeres ræsonnement, ikke på, om I peger på den rigtige person. Et omhyggeligt argument, der viser sig at være forkert, kan slå et heldigt gæt.",
+  howExercises:"I starter med en kort opvarmningsøvelse på omkring fem minutter og slutter med en lignende efter jeres endelige argument. Ingen af dem bedømmes.",
+  howGuide:"Derefter åbner spillet med <b>Metodeguiden</b>. Læs den sammen i gruppen, før I åbner sagsakterne: den viser, hvordan man skriver en hypotese, der kan testes, og hvordan spillet hænger sammen med forskningsdesign.",
+  teamName:"Gruppenavn", teamPh:"fx Gruppe 7", teamHint:"Brug et gruppenavn, ikke jeres egne navne.", teamSize:"Hvor mange af jer spiller i dag?",
+  constQ:"Spiller I som jeres projektgruppe?", constProject:"Ja, som vores projektgruppe (eller som studerende, der skriver alene)", constTemp:"Nej, som en gruppe sat sammen til i dag",
+  pgSize:"Hvor mange er der i alt i jeres projektgruppe?", pgHint:"Tæl alle i projektgruppen med, også dem, der ikke er her i dag. Skriv 1, hvis du skriver projekt alene. Hvis I er en gruppe sat sammen til i dag, så angiv størrelsen på din egen projektgruppe.",
+  errConst:"Angiv, om I spiller som jeres projektgruppe.", errPg:"Vælg, hvor mange der i alt er i jeres projektgruppe.", errPgSmall:"Projektgruppen kan ikke være mindre end det antal, der spiller i dag.",
+  choose:"Vælg...", section:"Jeres hold eller spor", modeQ:"Sådan svarer personerne",
+  modeAiTitle:"AI-personer i denne browser", modeAiHint:"Henter en lille sprogmodel (omkring 1 til 2 GB) første gang. Derefter er den gemt i browseren. Modellerne er svagere på dansk end på engelsk.",
+  modeAiNoGpu:"Denne browser understøtter ikke WebGPU. Brug en nyere Chrome eller Edge, eller vælg personer med faste svar.",
+  modeScrTitle:"Personer med faste svar", modeScrHint:"Faste svar, der udløses af det, I spørger om. Ingen download. Godt til test eller ældre computere.",
+  startBtn:"Start efterforskningen", modelsLoading:"Henter listen over modeller...", model:"Model", aboutGb:"omkring {0} GB",
+  modelHint:"Den første mulighed giver som regel de bedste personer. Vælg en 1B- eller 1,5B-model til svagere computere.",
+  libFail:"AI-biblioteket kunne ikke indlæses her ({0}). Vælg personer med faste svar i stedet.",
+  retryStorage:"Download mislykkedes med browserens cache. Prøver igen med en anden lagringsmetode...",
+  fail0:"Modellen kunne ikke starte ({0}).",
+  failNet:"Denne computer kan ikke nå huggingface.co, hvor modellen ligger. Netværket, en VPN eller en annonceblokering blokerer den sandsynligvis. Prøv et andet netværk, fx et hotspot fra en telefon, eller slå blokeringen fra for denne side.",
+  failQuota:"Browseren har for lidt lagerplads til modellen. Frigør diskplads, og brug ikke et privat vindue.",
+  failOther:"Downloadet blev afbrudt. Tjek, at I ikke er i et privat vindue, at computeren har et par GB ledig diskplads, og prøv igen. En mindre model kan også hjælpe.",
+  failScripted:"I kan spille med faste svar i mellemtiden.", checking:"Undersøger, hvad der gik galt...",
+  failGpu:"Browseren på denne computer understøtter i princippet WebGPU, men fandt intet grafikkort, den kan bruge til det. Tjek, at grafikacceleration er slået til i browserens indstillinger, opdatér browseren og grafikdriveren, og luk eventuelle fjernskrivebords- eller virtuelle maskine-sessioner. Siden chrome://gpu (eller edge://gpu) viser, om WebGPU er hardwareaccelereret.",
+  modeAiNoAdapter:"Browseren understøtter WebGPU, men fandt intet grafikkort, den kan bruge til det på denne computer. Vælg faste svar, eller brug en anden computer. Nogle gange hjælper det at slå grafikacceleration til i browserens indstillinger.",
+  modeAiChecking:"Undersøger, om denne computer kan køre modellen...",
+  modelHintWeak:"Denne computer ser ud til at have indbygget grafik, så en lille, hurtigere model er valgt. En hastighedstest efter indlæsningen viser, om den er hurtig nok.",
+  speedTesting:"Tester, hvor hurtigt personerne vil svare på denne computer...",
+  speedOk:"Hastighedstest færdig: svarene bør tage omkring {0} sekunder.",
+  speedSlow:"Svarene ville tage omkring {0} sekunder hver på denne computer. Det er for langsomt til at spille godt på den tid, I har.",
+  speedSmaller:"Prøv den mindre model ({0})", speedScripted:"Brug faste svar", speedContinue:"Fortsæt med AI alligevel",
+  modeAiMobile:"På telefoner og tablets giver AI-personerne ofte ulæselige svar, så faste svar er valgt. Brug en bærbar computer til AI-personer.",
+  aiGarbled:"AI-modellen bliver ved med at give ulæselig tekst på denne enhed, så personerne bruger nu faste svar. Intet af det, I har lavet, er gået tabt. Brug en bærbar computer til AI-personer.",
+  modeScriptedOff:"Faste svar (AI slået fra)",
+  errTeam:"Skriv først et gruppenavn.", errSize:"Vælg, hvor mange I er i gruppen.", errSection:"Vælg jeres hold eller spor.",
+  errMode:"Vælg, hvordan personerne svarer.", errNoModel:"Der er ingen tilgængelig model. Vælg personer med faste svar.",
+  modeAi:"AI-personer", modeAiOff:"AI ikke indlæst", modeScripted:"Faste svar", newGame:"Start et nyt spil",
+  tabGuide:"Metodeguide", tabFiles:"Sagsakter", tabPeople:"Afhøringer", tabLog:"Undersøgelseslog", tabFinal:"Endeligt argument",
+  tabInv:"Efterforskning", openLog:"Undersøgelseslog", closeLog:"Luk undersøgelsesloggen",
+  startHintPeople:"Afhør de fire personer i panelet Afhøringer: de ved ting, der ikke står i nogen fil.",
+  helpTitle:"Sådan fungerer efterforskningsskærmen", helpHide:"Skjul",
+  helpEvidence:"<b>Beviser</b> (til venstre): sagens akter. To er åbne fra starten. Resten låses op, efterhånden som jeres ræsonnement i undersøgelsesloggen når længere.",
+  helpInterviews:"<b>Afhøringer</b> (til højre): vælg en person, og stil spørgsmål med jeres egne ord, eller klik på et emne for at komme i gang. Folk fortæller kun det, I spørger om, og nogle åbner først op, når I har fundet bestemte beviser.",
+  helpLog:"<b>Undersøgelseslog</b>: skriv hver hypotese, forudsigelse og test ned. Den låser nye filer op, og det er den, I bliver vurderet på. På en bred skærm står den til højre; ellers åbner I den med knappen Undersøgelseslog øverst.",
+  helpNotes:"<b>Forklaringer</b> fra afhøringerne samles under afhøringerne, så I kan bruge dem som beviser i jeres test.",
+  helpCode:"<b>Kode</b>: jeres underviser giver jer en kode undervejs. Indtast den under listen med beviser.",
+  helpFinal:"<b>Endeligt argument</b>: når I er klar, eller når tiden næsten er gået, afleverer I jeres konklusion under fanen Endeligt argument.",
+  reloadMsg:"AI-modellen er ikke indlæst, så personerne bruger faste svar.", loadModel:"Indlæs {0}",
+  backFiles:"Tilbage til sagsakterne", startHere:"Start her", surprising:"Det overraskende faktum.",
+  startHint:"Forklar det i jeres undersøgelseslog. Hvilke filer I låser op, afhænger af, hvor langt jeres ræsonnement er nået.",
+  evidence:"Beviser", read:"Læst", available:"Tilgængelig", locked:"Låst: ", notRead:"Ikke læst endnu",
+  codePh:"Kode fra jeres underviser", enterCode:"Indtast kode", codeWrong:"Koden er forkert. Tjek den med jeres underviser.",
+  statements:"Forklaringer fra afhøringer", statementsEmpty:"Intet endnu. Forklaringer vises her, når et vidne fortæller jer noget, der har betydning.",
+  unverified:"Ubekræftede detaljer", unverifiedHint:"Ting, folk nævnte i forbifarten. De er ikke beviser, medmindre I kan koble dem til noget, der er.", none:"Ingen endnu.",
+  need1Lock:"Registrér en hypotese og en forudsigelse, der følger af den.", need2Lock:"Registrér en anden hypotese og mindst én test af en forudsigelse.", needEvent:"Frigives undervejs.",
+  interviews:"Afhøringer", askPrompt:"Stil {0} et spørgsmål. Vær konkrete: folk svarer på det, de bliver spurgt om.", qPh:"Jeres spørgsmål", askBtn:"Spørg",
+  aiNote:"Svarene genereres på denne computer. Personerne kan tage fejl, vige udenom eller lyve, ligesom mennesker.",
+  scriptedNote:"Faste svar: personerne svarer på det, jeres spørgsmål handler om. Knapperne viser de emner, hver person kan tale om.",
+  chipQ:"Fortæl om {0}.",
+  logTitle:"Undersøgelseslog", logIntro:"Hvert trin i jeres ræsonnement skrives her. Det er det, I bliver vurderet på.", toGuide:"Sådan skriver I en hypotese, der kan testes",
+  need0:"Næste filer: registrér en hypotese og derefter en forudsigelse knyttet til den.",
+  need1:(h, t) => "Næste filer: " + [h ? "en anden hypotese" : "", t ? "en test af en af jeres forudsigelser" : ""].filter(Boolean).join(" og ") + ".",
+  need2:"Alle almindelige filer er frigivet.", addHyp:"+ Hypotese", addPred:"+ Forudsigelse", addTest:"+ Test",
+  logEmpty:"Ingen indførsler endnu. Start med en hypotese, der kunne forklare det overraskende faktum.",
+  kHyp:"Hypotese", kPred:"Forudsigelse", kTest:"Test", iAbd:"abduktion", iDed:"deduktion", iInd:"induktion",
+  t_abduction:"Abduktion", t_deduction:"Deduktion", t_induction:"Induktion",
+  predPh:"fx en indførsel i en log, et hul i et alibi, en genstand, der mangler", testPh:"Hvad fandt I, da I undersøgte det, og hvad viser det?",
+  followsFrom:"Følger af", needHypFirst:"Registrér først en hypotese. En forudsigelse skal følge af en.", testsPred:"Tester forudsigelse",
+  evUsed:"Anvendte beviser", evEmpty:"Læs nogle filer, eller afhør nogen først.", result:"Resultat",
+  out_supports:"Understøtter forudsigelsen", out_contradicts:"Modsiger forudsigelsen", out_inconclusive:"Uafklaret",
+  os_supports:"understøtter", os_contradicts:"modsiger", os_inconclusive:"uafklaret",
+  needPredFirst:"Registrér først en forudsigelse. En test tjekker en forudsigelse.", phHyp:"Jeres hypotese", phPred:"Jeres forudsigelse", phTest:"Hvad fandt I?",
+  who:"Hvem", whoMulti:"Mere end én person", whoOther:"En anden", motive:"Motiv", motivePh:"Hvorfor skulle personen gøre det?",
+  means:"Midler", meansPh:"Hvor kom giften fra, og hvordan fik personen fat i den?", opp:"Mulighed", oppPh:"Hvornår og hvordan kom personen hen til karaflen?",
+  explains:"Hvad den forklarer", explainsPh:"Hvorfor er det overraskende faktum ikke længere overraskende, hvis dette er sandt?",
+  hypHint:"Motivet gør en hypotese plausibel. Midlerne og muligheden gør den testbar, så de to skal udfyldes.",
+  predQ:"Hvis hypotesen er sand, burde vi finde...", whereQ:"Hvor ville det vise sig?",
+  src_record:"Et dokument eller en registrering", src_witness:"En vidneforklaring", src_pattern:"Et mønster over tid (en log, en rutine)", src_physical:"Fysiske beviser",
+  doubtQ:"Hvis vi ikke finder det, hvad er så i tvivl?", doubtPh:"Hele hypotesen eller en del af den: motiv, midler eller mulighed?",
+  discLabel:"Denne forudsigelse skelner mellem to af vores hypoteser: de forventer forskellige ting her.", testQ:"Hvad fandt I?",
+  patternQ:"Hviler dette på et mønster, fx en rutine, en log over mange dage eller flere lignende tilfælde? Hvis ja, hvor meget kan man stole på det?", patternPh:"Lad feltet stå tomt, hvis ikke",
+  addToLog:"Føj til loggen", cancel:"Annullér", statement:"forklaring", distinguishes:"skelner mellem hypoteser", statusOf:"Status for {0}",
+  st_open:"åben", st_favoured:"foretrukken", st_rejected:"forkastet", from:"fra", tests:"tester", evidenceLbl:"Beviser: ",
+  lblMotive:"Motiv: ", lblMeans:"Midler: ", lblOpp:"Mulighed: ", lblExplains:"Forklarer: ", lblWhere:"Hvor: ", lblNotFound:"Hvis det ikke findes: ", lblPattern:"Mønster, der bygges på: ",
+  errWho:"Nævn en person, eller vælg en af de andre muligheder.", errMeansOpp:"Beskriv midlerne og muligheden. Det er dem, jeres forudsigelser skal komme fra.",
+  errSentence:"Skriv mindst én sætning.", released:"Nye filer er frigivet under Sagsakter.",
+  bridgeHint:"Diskutér det i gruppen, og skriv jeres svar. I kan fortsætte, når I har skrevet en sætning.", bridgeSave:"Gem og fortsæt",
+  postIntro:"En sidste øvelse på omkring fem minutter i samme format som opvarmningen, men med en ny sag, og tre korte spørgsmål om spillet. Svar som gruppe.",
+  submittedTitle:"Endeligt argument afleveret", submittedP:"Jeres underviser afslører løsningen i plenum. Indtil da holder I jeres ræsonnement inden for gruppen.",
+  researchAgreed:"Forskningsbrug: jeres gruppe sagde ja.", researchDeclined:"Forskningsbrug: jeres gruppe sagde nej.",
+  sentToForm:"Jeres svar blev også sendt til underviserens indsamlingsformular.",
+  fileHint:"Hvis jeres underviser beder om en fil, kan I downloade den her. Hvis det ikke virker, så kopiér teksten nedenfor.",
+  download:"Download fil", copyText:"Kopiér tekst", copied:"Kopieret.", copyManual:"Markér alt, og kopiér manuelt.",
+  finalTitle:"Endeligt argument", finalHint:"Det vurderes på, hvor godt ræsonnementet holder, herunder hvor ærligt I angiver, hvad I ikke kan vise.",
+  accuseQ:"Hvem anklager I?", undecided:"Ikke afgjort",
+  fHyp:"Jeres forklaring", fHypHint:"Abduktion: hvad skete der, og hvorfor gør det det overraskende faktum ikke-overraskende?",
+  fDed:"Hvad der følger, hvis den er sand", fDedHint:"Deduktion: de forudsigelser, I udledte, og de præmisser, de hviler på.",
+  fInd:"Hvordan beviserne testede den", fIndHint:"Induktion og test: hvilke beviser I undersøgte, hvilke mønstre I byggede på, og hvor meget man kan stole på dem.",
+  fAlt:"Konkurrerende forklaringer", fAltHint:"Hvilke alternativer overvejede I, og hvilke beviser skelner mellem dem og jeres?",
+  fUnc:"Hvad der stadig er usikkert", fUncHint:"Hvad ville få jer til at skifte mening? Hvad kunne I ikke udelukke?",
+  confidence:"Sikkerhed", conf1:"1: et gæt", conf2:"2: svag", conf3:"3: moderat", conf4:"4: stærk", conf5:"5: hævet over rimelig tvivl",
+  consentLegend:"Forskningsbrug af jeres svar",
+  consentText:"Jeres underviser kan bruge data fra dette spil i en forskningsartikel om undervisning i forskningsmetode: jeres undersøgelseslog, de to øvelser og jeres endelige argument, uden navne. Jeres svar har ingen betydning for bedømmelsen, og jeres aflevering bruges i plenum under alle omstændigheder. Vælg kun ja, hvis alle i gruppen er enige. Hvis I senere vil trække jeres samtykke tilbage, så kontakt {0}.",
+  consentYes:"Ja, alle i gruppen er enige i, at vores svar må bruges til forskning.", consentNo:"Nej, vores svar må ikke bruges til forskning.",
+  submitBtn:"Aflevér endeligt argument", errAccuse:"Vælg, hvem I anklager, eller Ikke afgjort.", errSections:"Skriv noget i hvert felt, også selv om det er kort.",
+  errConsent:"Svar på spørgsmålet om forskningsbrug, ja eller nej.", confirmSubmit:"Aflevér jeres endelige argument? I kan ikke ændre det bagefter.",
+  likertQ:"Hvor enige er I? (1 = slet ikke, 5 = helt)", commentQ:"Er der noget, vi bør ændre i spillet? (valgfrit)", agreement:"Enighed",
+  exExpl:"Foreslå en forklaring. Hvem handlede, og hvordan førte deres handlinger til resultatet?",
+  exP1:"Hvis jeres forklaring er sand, hvad burde man så også kunne observere? Giv en første observation.", exP2:"En anden observation.",
+  exRival:"Nævn en konkurrerende forklaring.", exDisc:"Hvilken observation ville kunne skelne mellem jeres forklaring og den konkurrerende?",
+  classifyQ:"Hvilken type ræsonnement er hvert udsagn? Konklusionen er den sidste sætning.", reasoningType:"Type ræsonnement",
+  saveGoGuide:"Gem og gå til metodeguiden", saveEx:"Gem øvelsen", warmTitle:"Opvarmning for {0}",
+  warmText:"Før sagen kommer en kort øvelse på omkring fem minutter. Den bedømmes ikke. Svar som gruppe, uden at slå noget op, så godt I kan lige nu. Efter jeres endelige argument laver I en lignende øvelse, så I og jeres underviser kan se, hvad der har ændret sig.",
+  exMissing:"Besvar alle dele, også selv om det er kort.", feedbackTitle:"Klassifikationen med svar", youHad:" (det havde I)", youChose:" (I valgte {0})",
+  feedbackNote:"Deduktion: konklusionen følger nødvendigt af præmisserne, også når en præmis ikke siges højt (fx at en årsag ikke kan komme efter sin virkning). Induktion: fra observerede tilfælde til ikke-observerede eller til fremtiden. Abduktion: fra en overraskende observation til den forklaring, der ville gøre den ikke-overraskende.",
+  rtTitle:"Opfølgende øvelse", rtText:"Denne korte øvelse på omkring fem minutter laves individuelt. Den bedømmes ikke. Den viser, hvad du husker om abduktion, deduktion og induktion nogle uger efter spillet.",
+  rtTeam:"Dit gruppenavn fra spillet (valgfrit)",
+  rtConsentText:"Din underviser kan bruge dine svar, uden dit navn, i en forskningsartikel om undervisning i forskningsmetode. Dit svar har ingen betydning for bedømmelsen. Hvis du senere vil trække dit samtykke tilbage, så kontakt {0}.",
+  rtYes:"Ja, mine svar må bruges til forskning.", rtNo:"Nej, mine svar må ikke bruges til forskning.",
+  savedThanks:"Gemt. Tak.", rtSent:"Dine svar er sendt til din underviser. ", rtFile:"Hvis din underviser beder om en fil, kan du downloade den her.",
+  ngTitle:"Start et nyt spil?",
+  ngText:(team, sub) => `Dette sletter alt, hvad ${team} har lavet på denne computer: undersøgelsesloggen, noter, afhøringer og svar på refleksionskort${sub ? " samt det afleverede endelige argument" : ""}. Det kan ikke fortrydes.`,
+  ngSubmitted:"<b>I har afleveret et endeligt argument.</b> Hvis jeres underviser skal bruge filen, så download den først under fanen Endeligt argument.",
+  ngType:"Skriv gruppenavnet, {0}, for at bekræfte", ngYes:"Slet og start forfra", ngNo:"Spil videre",
+  timeUp:"Tiden er gået. Aflevér jeres endelige argument nu.", finalCall:"Begynd at skrive jeres endelige argument. I har omkring {0} minutter.", of:"af",
+  answerIn:"Danish"
+ }
+};
+function t(k, ...a){
+  const s = (UI[LANG] && UI[LANG][k] !== undefined) ? UI[LANG][k] : UI.en[k];
+  if (s === undefined) return k;
+  if (typeof s === "function") return s(...a);
+  return a.length ? s.replace(/\{(\d)\}/g, (_, i) => a[i]) : s;
+}
+
+/* =====================================================================
+   ENGINE
+   ===================================================================== */
+const TEST = new URLSearchParams(location.search).has("test");
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TIME_RE = /\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g;
+const times = t => [...String(t).matchAll(TIME_RE)].map(m => m[1].padStart(2,"0")+":"+m[2]);
+const KIND = { get hyp(){ return t("kHyp"); }, get pred(){ return t("kPred"); }, get test(){ return t("kTest"); } };
+const KIND_INF = { get hyp(){ return t("iAbd"); }, get pred(){ return t("iDed"); }, get test(){ return t("iInd"); } };
+const GLOBAL_FORBIDDEN = [/\b(i|we) (killed|murdered|poisoned)\b/i, /\bthe (murderer|killer) (is|was)\b/i, /\b(as an ai|language model|this game|role-?play)\b/i,
+  /\b(jeg|vi) (dræbte|myrdede|forgiftede|slog .* ihjel)\b/i, /\b(morderen|gerningsmanden) (er|var)\b/i, /\b(som en ai|sprogmodel|dette spil|rollespil)\b/i];
+const PROTECTED = /digoxin|pill|tablet|medic|card|key|decanter|cognac|glass|poison|study|log\b|murder|kill|scarf|coat|cloak|pharmac|prescri|audit|money|grant|email|terrace|\bbar\b|\d|kort|nøgle|karaffel|glas|gift|arbejdsværelse|mord|dræb|tørklæde|frakke|garderobe|apotek|recept|revision|penge|bevilling|mail|terrasse/i;
+
+let state = load();
+setLang(state?.lang || LANG || CONFIG.defaultLanguage);
+let ui = { tab:"guide", doc:null, char:"marianne", form:null, busy:false, bridgeQueue:[], err:"" };
+if (state?.drafts?.__form) ui.form = { type:state.drafts.__form };
+let webllm = null, engine = null, loading = null, pendingLoad = null;
+const RETEST = new URLSearchParams(location.search).has("retest");
+const retest = { started:null, done:null };
+
+function load(){ try { const s = localStorage.getItem(CONFIG.storageKey); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
+function save(){ try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(state)); } catch(e){} }
+function assignArm(){
+  const X = CONFIG.experiment;
+  if (!X || !X.active) return { arm:"standard", cfg:{ scaffold:true, bridges:true } };
+  const names = Object.keys(X.arms), fromLink = new URLSearchParams(location.search).get("arm");
+  const arm = names.includes(fromLink) ? fromLink : names[Math.floor(Math.random() * names.length)];
+  return { arm, cfg:X.arms[arm], by: names.includes(fromLink) ? "link" : "random" };
+}
+function fresh(team, mode, modelId, teamSize, section){
+  const A = assignArm();
+  return { v:4, lang:LANG, team, mode, modelId, teamSize, section, arm:A.arm, armCfg:A.cfg, armBy:A.by || null, createdAt:Date.now(), startedAt:Date.now(),
+           events:[], exStart:{}, modelLoad:pendingLoad, speedTest:pendingSpeed, gpu:gpuInfo, docsOpened:{}, testimonies:{}, log:[], bridge:{},
+           eventUnlocked:false, chats:{}, emergent:[], submitted:null, seq:1, testUnlock:false,
+           pre:null, post:null, formOrder: Math.random() < 0.5 ? ["A","B"] : ["B","A"] };
+}
+
+function counts(){
+  const L = state.log;
+  return { h:L.filter(e=>e.type==="hyp").length,
+           p:L.filter(e=>e.type==="pred" && e.link).length,
+           t:L.filter(e=>e.type==="test" && e.link).length };
+}
+function tier(){ if (state.testUnlock) return 2; const c = counts(); const t1 = c.h>=1 && c.p>=1; return t1 && c.t>=1 && c.h>=2 ? 2 : t1 ? 1 : 0; }
+function met(req){
+  if (!req) return true;
+  if (req.tier && tier() < req.tier) return false;
+  if (req.event && !state.eventUnlocked) return false;
+  if (req.docs && !req.docs.every(d => state.docsOpened[d])) return false;
+  return true;
+}
+function docAvailable(d){ return d.tier === "event" ? state.eventUnlocked : tier() >= d.tier; }
+function tierNeed(n){ return n === 1 ? t("need1Lock") : n === 2 ? t("need2Lock") : t("needEvent"); }
+function elapsedMin(){ return (Date.now() - state.startedAt) / 60000; }
+
+/* ---------- keeping unsaved text when the screen is redrawn ---------- */
+// Every field the students type in is saved as they type and put back after each redraw,
+// so switching tabs, opening files or reloading the page never loses unsaved text.
+const LOG_DRAFTS = ["i:f-","i:h-","i:p-","i:t-","c:f-ev"];
+const NO_DRAFT = new Set(["i:code","i:ng-name","i:b-ans","i:team","i:tsize","i:tsection","i:pgsize","i:model","i:rt-team"]);
+function draftKey(el){
+  if (el.type === "radio") return el.name ? "r:" + el.name : null;
+  if (el.type === "checkbox" && !el.id) return "c:" + (el.className || "cb") + ":" + el.value;
+  return el.id ? "i:" + el.id : null;
+}
+function onDraft(e){
+  if (!state || RETEST) return;
+  const el = e.target;
+  if (!el.matches || !el.matches("input,textarea,select") || el.closest("dialog") || el.readOnly) return;
+  const k = draftKey(el);
+  if (!k || NO_DRAFT.has(k) || k.startsWith("r:mode") || k.startsWith("r:const")) return;
+  state.drafts = state.drafts || {};
+  state.drafts[k] = el.type === "checkbox" ? el.checked : el.value;
+  clearTimeout(onDraft.timer); onDraft.timer = setTimeout(save, 400);
+}
+document.addEventListener("input", onDraft, true);
+document.addEventListener("change", onDraft, true);
+function restoreDrafts(){
+  const D = state?.drafts; if (!D) return;
+  document.querySelectorAll("#root input, #root textarea, #root select").forEach(el => {
+    const k = draftKey(el); if (!k || !(k in D) || el.disabled) return;
+    if (el.type === "radio") el.checked = el.value === D[k];
+    else if (el.type === "checkbox") el.checked = !!D[k];
+    else el.value = D[k];
+  });
+}
+function clearDrafts(prefixes){
+  if (!state?.drafts) return;
+  for (const k of Object.keys(state.drafts)) if (prefixes.some(p => k.startsWith(p))) delete state.drafts[k];
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const root = $("#root");
+  if (RETEST){ root.innerHTML = retestView(); bindRetest(); return; }
+  if (!state){ root.innerHTML = startView(); bindStart(); return; }
+  if (!state.formOrder) state.formOrder = ["A","B"];
+  if (!state.exStart) state.exStart = {};
+  if (CONFIG.exercises && !state.pre){ document.body.dataset.tab = "warmup"; root.innerHTML = exerciseScreen(); bindExercise("pre"); restoreDrafts(); return; }
+  document.body.dataset.tab = ui.tab;
+  document.body.classList.toggle("logopen", !!ui.logOpen);
+  root.innerHTML = `
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">${esc(CONFIG.title)}</div>
+      <span>${esc(state.team)}</span>
+      <span class="clock" id="clock"></span>
+      <span class="small">${state.mode==="ai" ? (state.aiOff ? t("modeScriptedOff") : engine ? t("modeAi") : t("modeAiOff")) : t("modeScripted")}</span>
+      <button class="hbtn logbtn" id="logbtn">${t("openLog")} (${state.log.length})</button>
+      <button class="hbtn" id="newgamebtn">${t("newGame")}</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      ${[["guide","tabGuide"],["inv","tabInv"],["final","tabFinal"]].map(([k,l]) =>
+        `<button class="tab" role="tab" aria-selected="${ui.tab===k}" data-tab="${k}">${t(l)}</button>`).join("")}
+    </nav>
+  </header>
+  <div id="banner"></div>
+  ${state.mode==="ai" && !engine && !state.aiOff ? reloadBar() : ""}
+  ${state.aiOff ? `<div class="banner"><div>${t("aiGarbled")}</div></div>` : ""}
+  ${TEST ? testBar() : ""}
+  <div class="shell">
+    <section class="main-col stack">${ui.tab==="final" ? finalView() : ui.tab==="guide" ? guideView() : invView()}</section>
+    <aside class="panel">${logView()}</aside>
+  </div>`;
+  bindGame();
+  restoreDrafts();
+  tick();
+}
+
+function langSwitch(){
+  return `<div class="row langs" role="group" aria-label="Language / Sprog">${[["en","English"],["da","Dansk"]].map(([k,l]) =>
+    `<button class="btn ${LANG===k ? "primary" : "quiet"}" data-lang="${k}" aria-pressed="${LANG===k}">${l}</button>`).join("")}</div>`;
+}
+function startView(){
+  const gpu = !!navigator.gpu;
+  return `<div class="start stack">
+    ${langSwitch()}
+    <h1>${esc(CONFIG.title)}</h1>
+    <p class="lede">${t("lede")}</p>
+    <div class="panel">
+      <h2>${t("howTitle")}</h2>
+      <ol class="cycle"><li>${t("how1")}</li><li>${t("how2")}</li><li>${t("how3")}</li><li>${t("how4")}</li></ol>
+      <p>${t("howPeople")}</p>
+      <p>${t("howAssess")}</p>
+      ${CONFIG.exercises ? `<p>${t("howExercises")}</p>` : ""}
+      <p>${t("howGuide")}</p>
+    </div>
+    <div class="panel">
+      <label class="field"><span>${t("teamName")}</span><input type="text" id="team" maxlength="40" placeholder="${esc(t("teamPh"))}" value="${esc(ui.draftTeam || "")}"><div class="hint">${t("teamHint")}</div></label>
+      <label class="field"><span>${t("teamSize")}</span><select id="tsize"><option value="">${t("choose")}</option>${[1,2,3,4,5,6].map(n => `<option ${String(ui.draftSize)===String(n) ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <div class="field"><span style="font-weight:700;display:block;margin-bottom:6px">${t("constQ")}</span>
+        <label class="choice"><input type="radio" name="const" value="project" ${ui.draftConst==="project" ? "checked" : ""}><span>${t("constProject")}</span></label>
+        <label class="choice"><input type="radio" name="const" value="temporary" ${ui.draftConst==="temporary" ? "checked" : ""}><span>${t("constTemp")}</span></label></div>
+      <label class="field"><span>${t("pgSize")}</span><select id="pgsize"><option value="">${t("choose")}</option>${[1,2,3,4,5,6,7,8].map(n => `<option ${String(ui.draftPg)===String(n) ? "selected" : ""}>${n}</option>`).join("")}</select><div class="hint">${t("pgHint")}</div></label>
+      ${CONFIG.sections.length ? `<label class="field"><span>${t("section")}</span><select id="tsection"><option value="">${t("choose")}</option>${CONFIG.sections.map(x => `<option ${ui.draftSection===x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>` : ""}
+      <div class="field"><span style="font-weight:700;display:block;margin-bottom:6px">${t("modeQ")}</span>
+        <label class="choice"><input type="radio" name="mode" value="ai" ${gpu ? "checked" : "disabled"}>
+          <span><b>${t("modeAiTitle")}</b><br><span class="small muted">${gpu ? t("modeAiHint") : t("modeAiNoGpu")}</span></span></label>
+        <label class="choice"><input type="radio" name="mode" value="scripted" ${gpu ? "" : "checked"}>
+          <span><b>${t("modeScrTitle")}</b><br><span class="small muted">${t("modeScrHint")}</span></span></label>
+      </div>
+      <div id="modelbox"></div>
+      <p class="small" id="starterr" style="color:var(--warn)"></p>
+      <button class="btn primary" id="startbtn">${t("startBtn")}</button>
+    </div>
+  </div>`;
+}
+
+// navigator.gpu can exist even when no usable graphics adapter is available (blocked driver,
+// acceleration switched off, remote desktop). Ask for an adapter before offering AI mode.
+let adapterOk = null, adapterF16 = false, garbledCount = 0, gpuInfo = null, weakGpu = false, modelOptions = [], pendingSpeed = null;
+const MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+async function checkAdapter(){
+  const ai = document.querySelector("input[name=mode][value=ai]");
+  if (!ai || ai.disabled) return;
+  const hint = ai.closest("label").querySelector(".small");
+  if (adapterOk === null){
+    hint.textContent = t("modeAiChecking");
+    try {
+      const a = await navigator.gpu.requestAdapter(); adapterOk = !!a; adapterF16 = !!a?.features?.has("shader-f16");
+      const info = a?.info || {};
+      gpuInfo = { vendor:info.vendor || "", architecture:info.architecture || "", description:info.description || "", f16:adapterF16, mobile:MOBILE };
+      // Integrated graphics (most Intel, many AMD, phones) are much slower than Apple M-series or separate graphics cards.
+      const v = (gpuInfo.vendor + " " + gpuInfo.description).toLowerCase();
+      weakGpu = MOBILE || !(/apple|nvidia/.test(v) || /radeon rx|arc a/.test(v));
+    } catch(e){ adapterOk = false; }
+  }
+  if (!adapterOk){
+    ai.checked = false; ai.disabled = true;
+    document.querySelector("input[name=mode][value=scripted]").checked = true;
+    hint.textContent = t("modeAiNoAdapter");
+  } else {
+    hint.textContent = t("modeAiHint") + (MOBILE ? " " + t("modeAiMobile") : "");
+    if (MOBILE && ui.modeTouched !== true){ ai.checked = false; document.querySelector("input[name=mode][value=scripted]").checked = true; }
+  }
+}
+async function populateModels(){
+  const box = $("#modelbox"); if (!box) return;
+  const mode = document.querySelector("input[name=mode]:checked")?.value;
+  if (mode !== "ai"){ box.innerHTML = ""; return; }
+  box.innerHTML = `<p class="small muted">${t("modelsLoading")}</p>`;
+  try {
+    await loadLib();
+    const list = webllm.prebuiltAppConfig.model_list;
+    const pref = adapterF16 ? CONFIG.preferredModels : CONFIG.preferredModelsF32;
+    let opts = pref.map(id => list.find(m => m.model_id === id)).filter(Boolean);
+    if (!opts.length) opts = list.filter(m => /instruct/i.test(m.model_id) && (m.vram_required_MB||9e9) < 4500).slice(0,6);
+    modelOptions = opts;
+    const small = opts.find(m => /1\.5B|1B/i.test(m.model_id));
+    const def = weakGpu && small ? small.model_id : opts[0]?.model_id;
+    box.innerHTML = `<label class="field"><span>${t("model")}</span><select id="model">${opts.map(m =>
+      `<option value="${esc(m.model_id)}" ${m.model_id === def ? "selected" : ""}>${esc(m.model_id)}${m.vram_required_MB ? ` (${t("aboutGb", Math.round(m.vram_required_MB/100)/10)})` : ""}</option>`).join("")}</select>
+      <div class="hint">${weakGpu && small ? t("modelHintWeak") : t("modelHint")}</div></label>
+      <div class="progress" hidden><div></div></div><p class="small muted" id="progtext"></p><div id="speedbox"></div>`;
+  } catch(e){
+    box.innerHTML = `<p class="small" style="color:var(--warn)">${esc(t("libFail", e.message || e))}</p>`;
+  }
+}
+async function loadLib(){ if (!webllm) webllm = await import(CONFIG.webllmUrl); return webllm; }
+let engineStorage = "cache";
+async function startEngine(modelId, onProgress){
+  await loadLib();
+  engineStorage = "cache";
+  try {
+    engine = await webllm.CreateMLCEngine(modelId, { initProgressCallback: onProgress });
+  } catch(e){
+    // The browser's Cache storage sometimes fails. Retry once with IndexedDB storage instead.
+    if (!/cache|network|quota|storage/i.test(String(e.message||e))) throw e;
+    onProgress({ progress:0, text:t("retryStorage") });
+    engineStorage = "indexeddb";
+    engine = await webllm.CreateMLCEngine(modelId, { initProgressCallback: onProgress,
+      appConfig: { ...webllm.prebuiltAppConfig, useIndexedDBCache: true } });
+  }
+}
+async function askSpeed(st, smaller){
+  return new Promise(resolve => {
+    const box = $("#speedbox");
+    box.innerHTML = `<div class="next" style="margin-top:8px"><p>${esc(t("speedSlow", st.seconds))}</p><div class="row">
+      ${smaller ? `<button class="btn primary" data-speed="smaller">${esc(t("speedSmaller", smaller.model_id))}</button>` : ""}
+      <button class="btn ${smaller ? "" : "primary"}" data-speed="scripted">${t("speedScripted")}</button>
+      <button class="btn quiet" data-speed="continue">${t("speedContinue")}</button></div></div>`;
+    box.querySelectorAll("[data-speed]").forEach(b => b.onclick = () => { box.innerHTML = ""; resolve(b.dataset.speed); });
+  });
+}
+async function explainFailure(e, modelId){
+  const msg = String(e.message||e);
+  const parts = [t("fail0", msg)];
+  if (/compatible GPU|WebGPU|adapter|GPUDevice/i.test(msg)){ parts.push(t("failGpu"), t("failScripted")); return parts.join(" "); }
+  let hfOk = true;
+  try {
+    const m = webllm?.prebuiltAppConfig.model_list.find(x => x.model_id === modelId);
+    const base = (m?.model || "https://huggingface.co/mlc-ai/" + modelId).replace(/\/$/, "");
+    const r = await fetch(base + "/resolve/main/mlc-chat-config.json", { cache:"no-store" });
+    hfOk = r.ok;
+  } catch(err){ hfOk = false; }
+  parts.push(!hfOk ? t("failNet") : /quota|storage/i.test(msg) ? t("failQuota") : t("failOther"));
+  parts.push(t("failScripted"));
+  return parts.join(" ");
+}
+
+function bindStart(){
+  document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => {
+    ui.draftTeam = $("#team").value; ui.draftSize = $("#tsize").value; ui.draftSection = $("#tsection")?.value;
+    ui.draftConst = document.querySelector("input[name=const]:checked")?.value; ui.draftPg = $("#pgsize").value;
+    setLang(b.dataset.lang); render();
+  });
+  document.querySelectorAll("input[name=mode]").forEach(r => r.addEventListener("change", () => { ui.modeTouched = true; populateModels(); }));
+  checkAdapter().then(() => populateModels());
+  $("#startbtn").addEventListener("click", async () => {
+    const team = $("#team").value.trim();
+    let mode = document.querySelector("input[name=mode]:checked")?.value;
+    const err = $("#starterr");
+    if (!team){ err.textContent = t("errTeam"); return; }
+    const teamSize = Number($("#tsize").value), section = $("#tsection")?.value || null;
+    if (!teamSize){ err.textContent = t("errSize"); return; }
+    const constellation = document.querySelector("input[name=const]:checked")?.value, projectGroupSize = Number($("#pgsize").value);
+    if (!constellation){ err.textContent = t("errConst"); return; }
+    if (!projectGroupSize){ err.textContent = t("errPg"); return; }
+    if (constellation === "project" && projectGroupSize < teamSize){ err.textContent = t("errPgSmall"); return; }
+    if (CONFIG.sections.length && !section){ err.textContent = t("errSection"); return; }
+    if (!mode){ err.textContent = t("errMode"); return; }
+    let modelId = null;
+    if (mode === "ai"){
+      modelId = $("#model")?.value;
+      if (!modelId){ err.textContent = t("errNoModel"); return; }
+      $("#startbtn").disabled = true;
+      const bar = $(".progress"); bar.hidden = false;
+      try {
+        const t0 = Date.now();
+        await startEngine(modelId, r => { bar.firstElementChild.style.width = Math.round((r.progress||0)*100)+"%"; $("#progtext").textContent = r.text || ""; });
+        pendingLoad = { seconds:Math.round((Date.now() - t0)/1000), storage:engineStorage };
+        $("#progtext").textContent = t("speedTesting");
+        let st = await speedTest(modelId);
+        while (st.verdict === "slow"){
+          const smaller = modelOptions.filter(m => (m.vram_required_MB || 0) < ((modelOptions.find(x => x.model_id === modelId) || {}).vram_required_MB || 0))
+                                      .sort((x, y) => x.vram_required_MB - y.vram_required_MB)[0];
+          const choice = await askSpeed(st, smaller);
+          if (choice === "smaller"){
+            try { await engine.unload(); } catch(e){}
+            modelId = smaller.model_id;
+            await startEngine(modelId, r => { bar.firstElementChild.style.width = Math.round((r.progress||0)*100)+"%"; $("#progtext").textContent = r.text || ""; });
+            $("#progtext").textContent = t("speedTesting");
+            st = { ...(await speedTest(modelId)), switchedFrom:st.model };
+            continue;
+          }
+          if (choice === "scripted"){ try { await engine.unload(); } catch(e){} engine = null; st = { ...st, choseScripted:true }; mode = "scripted"; modelId = null; }
+          else st = { ...st, continuedAnyway:true };
+          break;
+        }
+        pendingSpeed = st;
+        if (st.verdict !== "slow") $("#progtext").textContent = t("speedOk", st.seconds);
+      } catch(e){
+        $("#startbtn").disabled = false;
+        err.textContent = t("checking");
+        err.textContent = await explainFailure(e, modelId);
+        return;
+      }
+    }
+    state = fresh(team, mode, modelId, teamSize, section);
+    state.constellation = constellation; state.projectGroupSize = projectGroupSize; ev("start", { mode, model:modelId, arm:state.arm, lang:LANG, speed:pendingSpeed?.seconds ?? null }); save(); render();
+  });
+}
+
+function reloadBar(){
+  return `<div class="banner"><div class="row"><span>${t("reloadMsg")}</span>
+    <button class="btn" id="reload">${esc(t("loadModel", state.modelId || "model"))}</button><span class="small muted" id="reloadtext"></span></div></div>`;
+}
+function testBar(){
+  return `<div class="banner"><div class="row"><b>Test controls</b>
+    <button class="btn quiet" id="t-unlock">${state.testUnlock ? "Lock files again" : "Unlock all files"}</button>
+    <button class="btn quiet" id="t-event">Trigger event</button>
+    <button class="btn quiet" id="t-reset">Reset game</button></div></div>`;
+}
+
+function filesView(){
+  if (ui.doc){
+    const d = DOCS.find(x => x.id === ui.doc);
+    return `<div><button class="btn quiet" id="back">${t("backFiles")}</button></div>
+      <article class="sheet"><span class="code">${d.code}</span><h3>${esc(d.title)}</h3>${esc(d.text)}</article>`;
+  }
+  const test = Object.keys(state.testimonies).map(id => state.testimonies[id]);
+  return `
+  <div class="panel t-hyp">
+    <h2>${t("startHere")}</h2>
+    <p><b>${t("surprising")}</b> ${esc(OPENING)}</p>
+    <p class="small muted">${t("startHint")} ${t("startHintPeople")}</p>
+  </div>
+  <div class="panel">
+    <h2>${t("evidence")}</h2>
+    <ul class="files">${DOCS.map(d => {
+      const ok = docAvailable(d), seen = state.docsOpened[d.id];
+      return `<li><button class="file" data-doc="${d.id}" ${ok ? "" : "disabled"}>
+        <span class="code">${d.code}</span>
+        <span><b>${esc(d.title)}</b><br><span class="meta">${ok ? (seen ? t("read") : t("available")) : t("locked") + esc(tierNeed(d.tier))}</span></span>
+        ${ok && !seen ? `<span class="new-dot" title="${esc(t("notRead"))}"></span>` : ""}</button></li>`; }).join("")}
+    </ul>
+    ${state.eventUnlocked ? "" : `<div class="row" style="margin-top:14px"><input type="text" id="code" placeholder="${esc(t("codePh"))}" style="max-width:240px"><button class="btn" id="codebtn">${t("enterCode")}</button><span class="small" id="codemsg"></span></div>`}
+  </div>`;
+}
+function notesView(){
+  const test = Object.keys(state.testimonies).map(id => state.testimonies[id]);
+  return `<div class="panel">
+    <h2>${t("statements")}</h2>
+    ${test.length ? `<ul class="facts">${test.map(x => `<li>${esc(testimonyText(x))}</li>`).join("")}</ul>` : `<p class="muted">${t("statementsEmpty")}</p>`}
+  </div>
+  <div class="panel">
+    <h2>${t("unverified")}</h2>
+    <p class="small muted">${t("unverifiedHint")}</p>
+    ${state.emergent.length ? `<ul class="facts">${state.emergent.map(e => `<li class="rumour">${esc(nameOf(e.who))}: ${esc(e.text)}</li>`).join("")}</ul>` : `<p class="muted">${t("none")}</p>`}
+  </div>`;
+}
+function helpView(){
+  if (state.hideHelp) return "";
+  return `<div class="panel help">
+    <div class="row"><h2 style="margin:0;margin-right:auto">${t("helpTitle")}</h2><button class="btn quiet" id="hidehelp">${t("helpHide")}</button></div>
+    <ul>
+      <li>${t("helpEvidence")}</li>
+      <li>${t("helpInterviews")}</li>
+      <li>${t("helpLog")}</li>
+      <li>${t("helpNotes")}</li>
+      <li>${t("helpCode")}</li>
+      <li>${t("helpFinal")}</li>
+    </ul></div>`;
+}
+function invView(){
+  return `${helpView()}<div class="inv">
+    <div class="stack">${filesView()}</div>
+    <div class="stack">${peopleView()}${notesView()}</div>
+  </div>`;
+}
+const nameOf = id => CHARACTERS.find(c => c.id === id)?.name || id;
+// Testimony texts are looked up in the current language, so switching language never mixes the notes.
+function testimonyText(x){
+  for (const c of CHARACTERS) for (const tp of c.topics){
+    if (tp.testimony?.id === x.id) return tp.testimony.text;
+    if (tp.locked?.testimony?.id === x.id) return tp.locked.testimony.text;
+  }
+  return x.text;
+}
+
+function peopleView(){
+  const c = CHARACTERS.find(x => x.id === ui.char);
+  const chat = state.chats[c.id] || [];
+  return `<div class="panel">
+    <h2>${t("interviews")}</h2>
+    <div class="people">${CHARACTERS.map(p => `<button class="person" data-char="${p.id}" aria-pressed="${p.id===c.id}"><b>${esc(p.name)}</b><span class="small muted">${esc(p.role)}</span></button>`).join("")}</div>
+    <div class="chat" id="chat">${chat.length ? chat.map(m => `<div class="msg ${m.role==="user" ? "q" : ""}"><div class="who">${m.role==="user" ? esc(state.team) : esc(c.name)}</div><div class="bubble">${esc(m.content)}</div></div>`).join("")
+      : `<p class="muted">${esc(t("askPrompt", c.name.split(" ")[0]))}</p>`}
+      ${ui.busy ? `<div class="msg"><div class="who">${esc(c.name)}</div><div class="bubble muted" id="pending">...</div></div>` : ""}</div>
+    <div class="chips">${c.topics.map(tp => `<button class="chip" data-chip="${esc(tp.label)}">${esc(tp.label)}</button>`).join("")}</div>
+    <form id="ask" class="row"><input type="text" id="q" maxlength="300" placeholder="${esc(t("qPh"))}" style="flex:1;min-width:200px" ${ui.busy ? "disabled" : ""}><button class="btn primary" ${ui.busy ? "disabled" : ""}>${t("askBtn")}</button></form>
+    <p class="small muted" style="margin-top:8px">${state.mode==="ai" && engine && !state.aiOff ? t("aiNote") : t("scriptedNote")}</p>
+  </div>`;
+}
+
+function logView(){
+  const c = counts(), tr = tier();
+  const need = tr===0 ? t("need0") : tr===1 ? t("need1", c.h < 2, c.t < 1) : t("need2");
+  const f = ui.form;
+  return `<button class="btn quiet logclose" id="logclose" aria-label="${esc(t("closeLog"))}">×</button><h2>${t("logTitle")}</h2>
+  <p class="small muted">${t("logIntro")} <button class="linkbtn" id="toguide">${t("toGuide")}</button></p>
+  <div class="next">${esc(need)}</div>
+  <div class="addbar">
+    <button class="btn t-hyp" data-add="hyp">${t("addHyp")}</button>
+    <button class="btn t-pred" data-add="pred">${t("addPred")}</button>
+    <button class="btn t-test" data-add="test">${t("addTest")}</button>
+  </div>
+  ${f ? formView(f) : ""}
+  ${state.log.length ? state.log.slice().reverse().map(entryView).join("") : `<p class="muted small">${t("logEmpty")}</p>`}`;
+}
+function formView(f){
+  const hyps = state.log.filter(e => e.type==="hyp"), preds = state.log.filter(e => e.type==="pred");
+  const evidence = [...DOCS.filter(d => state.docsOpened[d.id]).map(d => [d.id, d.code+" "+d.title]),
+                    ...Object.values(state.testimonies).map(x => { const s = testimonyText(x); return [x.id, s.split(":")[0] + ": " + s.split(":").slice(1).join(":").slice(0,70) + "..."]; })];
+  let extra = "";
+  if (f.type==="pred") extra = hyps.length ? `<label class="field"><span>${t("followsFrom")}</span><select id="f-link">${hyps.map(h => `<option value="${h.id}">H${h.n}: ${esc(h.text.slice(0,60))}</option>`).join("")}</select></label>`
+                                            : `<p class="small" style="color:var(--warn)">${t("needHypFirst")}</p>`;
+  if (f.type==="test") extra = preds.length ? `<label class="field"><span>${t("testsPred")}</span><select id="f-link">${preds.map(p => `<option value="${p.id}">P${p.n}: ${esc(p.text.slice(0,60))}</option>`).join("")}</select></label>
+      <div class="field"><span style="font-weight:700">${t("evUsed")}</span><div class="ev">${evidence.length ? evidence.map(([id,l]) => `<label><input type="checkbox" value="${id}" class="f-ev"> ${esc(l)}</label>`).join("") : `<span class="small muted">${t("evEmpty")}</span>`}</div></div>
+      <label class="field"><span>${t("result")}</span><select id="f-out">${["supports","contradicts","inconclusive"].map(o => `<option value="${o}">${t("out_"+o)}</option>`).join("")}</select></label>`
+                                            : `<p class="small" style="color:var(--warn)">${t("needPredFirst")}</p>`;
+  const blocked = (f.type==="pred" && !hyps.length) || (f.type==="test" && !preds.length);
+  const dis = blocked ? "disabled" : "";
+  const scaffold = state.armCfg?.scaffold !== false;
+  let body;
+  if (!scaffold) body = `${f.type==="hyp" ? "" : extra}
+    <label class="field"><textarea id="f-text" placeholder="${esc(f.type==="hyp" ? t("phHyp") : f.type==="pred" ? t("phPred") : t("phTest"))}" ${dis}></textarea></label>`;
+  else if (f.type==="hyp") body = `
+    <label class="field"><span>${t("who")}</span><select id="h-who"><option value="">${t("choose")}</option>${CHARACTERS.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("")}<option value="multiple">${t("whoMulti")}</option><option value="other">${t("whoOther")}</option></select></label>
+    <label class="field"><span>${t("motive")}</span><textarea class="short" id="h-motive" placeholder="${esc(t("motivePh"))}"></textarea></label>
+    <label class="field"><span>${t("means")}</span><textarea class="short" id="h-means" placeholder="${esc(t("meansPh"))}"></textarea></label>
+    <label class="field"><span>${t("opp")}</span><textarea class="short" id="h-opp" placeholder="${esc(t("oppPh"))}"></textarea></label>
+    <label class="field"><span>${t("explains")}</span><textarea class="short" id="h-expl" placeholder="${esc(t("explainsPh"))}"></textarea></label>
+    <p class="hint">${t("hypHint")}</p>`;
+  else if (f.type==="pred") body = `${extra}
+    <label class="field"><span>${t("predQ")}</span><textarea id="f-text" placeholder="${esc(t("predPh"))}" ${dis}></textarea></label>
+    <label class="field"><span>${t("whereQ")}</span><select id="p-src" ${dis}>${["record","witness","pattern","physical"].map(s => `<option value="${s}">${t("src_"+s)}</option>`).join("")}</select></label>
+    <label class="field"><span>${t("doubtQ")}</span><textarea class="short" id="p-doubt" placeholder="${esc(t("doubtPh"))}" ${dis}></textarea></label>
+    <label class="choice"><input type="checkbox" id="p-disc" ${dis}><span class="small">${t("discLabel")}</span></label>`;
+  else body = `${extra}
+    <label class="field"><span>${t("testQ")}</span><textarea id="f-text" placeholder="${esc(t("testPh"))}" ${dis}></textarea></label>
+    <label class="field"><span>${t("patternQ")}</span><textarea class="short" id="t-pattern" placeholder="${esc(t("patternPh"))}" ${dis}></textarea></label>`;
+  return `<div class="entry t-${f.type}"><div class="head"><span class="kind">${KIND[f.type]}</span><span class="muted">${KIND_INF[f.type]}</span></div>
+    ${body}
+    <p class="small" id="f-err" style="color:var(--warn)"></p>
+    <div class="row"><button class="btn primary" id="f-save" ${dis}>${t("addToLog")}</button><button class="btn quiet" id="f-cancel">${t("cancel")}</button></div></div>`;
+}
+function entryView(e){
+  const link = e.link ? state.log.find(x => x.id === e.link) : null;
+  const tag = x => (x.type==="hyp" ? "H" : x.type==="pred" ? "P" : "T") + x.n;
+  const evs = (e.evidence||[]).map(id => DOCS.find(d => d.id===id)?.code || t("statement")).join(", ");
+  return `<div class="entry t-${e.type} ${e.status==="rejected" ? "rejected" : ""}">
+    <div class="head"><span class="kind">${tag(e)} ${KIND[e.type]}</span><span class="muted">${KIND_INF[e.type]}</span>
+      ${e.type==="test" ? `<span>${t("os_"+e.outcome)}</span>` : ""}${e.disc ? `<span>${t("distinguishes")}</span>` : ""}
+      ${e.type==="hyp" ? `<select data-status="${e.id}" aria-label="${esc(t("statusOf", tag(e)))}" style="width:auto;margin-left:auto;padding:1px 4px;font-size:.82rem">
+         ${["open","favoured","rejected"].map(s => `<option value="${s}" ${e.status===s ? "selected" : ""}>${t("st_"+s)}</option>`).join("")}</select>` : ""}</div>
+    ${link ? `<div class="link">${e.type==="pred" ? t("from") : t("tests")} ${tag(link)}</div>` : ""}
+    <div class="text">${esc(e.text)}</div>
+    ${evs ? `<div class="link">${t("evidenceLbl")}${esc(evs)}</div>` : ""}</div>`;
+}
+
+function guideView(){ return LANG === "da" ? guideDa() : guideEn(); }
+function guideEn(){
+  return `<div class="panel guide">
+  <h2>Method guide</h2>
+  <p><b>The screen.</b> Under <b>Investigation</b> you find the case files on the left and the interviews on the right, where you can question the four people involved. Your <b>Inquiry log</b> is next to them on a wide screen, or behind the Inquiry log button at the top. You submit your conclusion under <b>Final argument</b>.</p>
+  <p>This game trains the same reasoning you will use in your own research design. Read sections 1 to 3 as a team before you open the case files. Section 5 shows how each step carries over to social science research. You can come back to this guide at any time.</p>
+
+  <h3 id="g-hyp">1. Writing a hypothesis you can test</h3>
+  <p>A hypothesis about a crime, like one about a social phenomenon, has to say more than who did it and why. A motive tells you that someone had a reason. It leaves few traces. What leaves traces is the mechanism: how the act was actually carried out. A testable hypothesis therefore names four things:</p>
+  <ul>
+    <li><b>A person.</b> Who acted. Without a named actor you cannot check anyone's movements, access or alibi.</li>
+    <li><b>A motive.</b> Why they would do it. This makes the hypothesis plausible, but on its own it predicts very little.</li>
+    <li><b>A mechanism.</b> The means (where the poison came from and how the person got it) and the opportunity (when and how they reached the decanter). This is the part that produces predictions: entries in logs, missing objects, gaps in alibis.</li>
+    <li><b>What it explains.</b> Why the surprising fact is no longer surprising if the hypothesis is true.</li>
+  </ul>
+  <p>The more specific the mechanism, the more follows from it and the easier it is to test. The price is that a very specific hypothesis is more likely to be wrong in some detail. That is a good trade: a hypothesis that cannot be wrong cannot be tested either.</p>
+  <p>Be careful with rescues. When a fact does not fit and you add an extra assumption to save your hypothesis (an accomplice, a secret affair, a lie told for someone), the addition needs evidence of its own. Otherwise you have made the hypothesis harder to refute without making it better supported.</p>
+
+  <h3 id="g-pred">2. Deriving predictions</h3>
+  <p>A prediction is what must also be true if the hypothesis is true. Use the frame: <i>If [hypothesis], then we should find [observation] in [kind of source]. If we do not, [which part] is in doubt.</i></p>
+  <p>A useful prediction could turn out false. The most useful ones are those where two of your hypotheses expect different things, because then one observation can tell them apart. Also note what your deduction rests on: a conclusion can follow perfectly from its premises and still be wrong if a premise is.</p>
+
+  <h3 id="g-test">3. Testing</h3>
+  <p>Record what you actually found and whether it supports or contradicts the prediction. When your test relies on a pattern, such as a routine, a log over many days, or several similar cases, you are reasoning inductively: from observed cases to one you did not observe. Ask how strong that pattern is and whether this case belongs to it.</p>
+  <p>Tests differ in strength (Van Evera 1997; Collier 2011). A <b>hoop test</b> checks a necessary condition: the culprit must have been able to reach the decanter. Failing it eliminates a hypothesis, but passing it proves little, since several people pass. A <b>smoking-gun test</b> checks something that strongly confirms if found, such as incriminating evidence in someone's possession. Not finding it does not eliminate anyone. And smoking guns can be planted.</p>
+
+  <h3 id="g-ex">4. A worked example from outside the case</h3>
+  <div class="example">
+  <p><b>Surprising fact.</b> A project group's shared folder was deleted on Friday at 20:40. Nobody admits it.</p>
+  <p><b>H1.</b> Anna. Motive: she disagreed with the group's analysis. Means: her own login. Opportunity: she was working online on Friday evening. Explains: the deletion happened at a time when she was active.</p>
+  <p><b>H2.</b> No person: a synchronisation error in the cloud service.</p>
+  <p><b>P1, from H1.</b> If Anna deleted it, the server log should show the deletion from her account at 20:40. If not, the means part of H1 fails.</p>
+  <p><b>P2, telling H1 and H2 apart.</b> If it was a sync error, other folders synced at the same time should also be damaged. H1 predicts that only this folder is affected.</p>
+  <p><b>T1, testing P2.</b> Only this folder was affected: supports H1 over H2. But the service's history shows sync errors on 3 of the last 50 syncs, always affecting single folders. That pattern (induction) weakens the test: a single-folder loss is also what H2 would produce.</p>
+  </div>
+
+  <h3 id="g-research">5. From the manor to your research design</h3>
+  <p>Each step in the game has a counterpart in social science research:</p>
+  <ul>
+    <li><b>The surprising fact</b> is your research puzzle: something that existing explanations do not account for. Starting from it and proposing an explanation is abduction (Peirce, Collected Papers 5.171; Timmermans and Tavory 2012).</li>
+    <li><b>Person, motive and mechanism</b> correspond to actors, their interests, and the causal mechanism that links a cause to an outcome. Social science explanations are stronger when they specify how an outcome is produced, not only which factors are associated with it (Hedstr\u00f6m and Ylikoski 2010).</li>
+    <li><b>Predictions</b> are the observable implications of your theory: what you should see in your data if the theory holds (King, Keohane and Verba 1994, ch. 1). A theory with no observable implications cannot be tested.</li>
+    <li><b>Tests</b> are your analysis. Hoop and smoking-gun tests are standard tools in process tracing (Collier 2011; Beach and Pedersen 2019).</li>
+    <li><b>Induction</b> is generalising from your cases, interviews or sample. Its strength depends on how many cases you have, how they were selected, and whether the new case belongs to the same population.</li>
+    <li><b>Rescues</b> are the auxiliary assumptions researchers add when data do not fit a favoured theory. They can be legitimate, but only if they are tested in turn.</li>
+  </ul>
+  <div class="example">
+  <p><b>An example.</b> Participation in a municipality's co-creation process for a local climate plan fell sharply after the second workshop.</p>
+  <p><b>Weak hypothesis:</b> citizens lost interest. It names no actor or mechanism, so almost any data fit it.</p>
+  <p><b>Specific hypothesis:</b> at the second workshop the municipality presented a finished draft plan (mechanism), which signalled that decisions had already been made, so citizens who had joined to influence the plan (actors and motive) stopped coming.</p>
+  <p><b>Predictions:</b> attendance should fall after the draft was presented, not before. People who dropped out should mention lack of influence in interviews. Participants who came for other reasons, such as meeting neighbours, should be more likely to stay. <b>Rival:</b> the workshops clashed with the holidays. That predicts a similar drop in other municipal meetings the same month, which is a test that tells the two apart.</p>
+  </div>
+  <h3>References</h3>
+  <p class="small">Beach, D. and Pedersen, R. B. (2019) <i>Process-Tracing Methods: Foundations and Guidelines</i>, 2nd edn. University of Michigan Press.<br>
+  Collier, D. (2011) Understanding process tracing. <i>PS: Political Science and Politics</i> 44(4), 823\u2013830.<br>
+  Hedstr\u00f6m, P. and Ylikoski, P. (2010) Causal mechanisms in the social sciences. <i>Annual Review of Sociology</i> 36, 49\u201367.<br>
+  King, G., Keohane, R. O. and Verba, S. (1994) <i>Designing Social Inquiry</i>. Princeton University Press.<br>
+  Peirce, C. S. (1931\u20131958) <i>Collected Papers</i>, vol. 5. Harvard University Press.<br>
+  Timmermans, S. and Tavory, I. (2012) Theory construction in qualitative research: from grounded theory to abductive analysis. <i>Sociological Theory</i> 30(3), 167\u2013186.<br>
+  Van Evera, S. (1997) <i>Guide to Methods for Students of Political Science</i>. Cornell University Press.</p>
+  <div class="row" style="margin-top:18px"><button class="btn primary" id="tofiles">Start the investigation</button></div>
+  </div>`;
+}
+
+function guideDa(){
+  return `<div class="panel guide">
+  <h2>Metodeguide</h2>
+  <p><b>Skærmen.</b> Under <b>Efterforskning</b> finder I sagsakterne til venstre og afhøringerne til højre, hvor I kan afhøre de fire involverede personer. Jeres <b>Undersøgelseslog</b> står ved siden af på en bred skærm eller bag knappen Undersøgelseslog øverst. I afleverer jeres konklusion under <b>Endeligt argument</b>.</p>
+  <p>Spillet træner det samme ræsonnement, som I skal bruge i jeres eget forskningsdesign. Læs afsnit 1 til 3 sammen i gruppen, før I åbner sagsakterne. Afsnit 5 viser, hvordan hvert trin kan overføres til samfundsvidenskabelig forskning. I kan altid vende tilbage til guiden.</p>
+
+  <h3 id="g-hyp">1. At skrive en hypotese, der kan testes</h3>
+  <p>En hypotese om en forbrydelse skal, ligesom en hypotese om et socialt fænomen, sige mere end hvem der gjorde det og hvorfor. Et motiv fortæller, at nogen havde en grund. Det efterlader få spor. Det, der efterlader spor, er mekanismen: hvordan handlingen faktisk blev udført. En hypotese, der kan testes, nævner derfor fire ting:</p>
+  <ul>
+    <li><b>En person.</b> Hvem der handlede. Uden en navngiven aktør kan man ikke tjekke nogens bevægelser, adgang eller alibi.</li>
+    <li><b>Et motiv.</b> Hvorfor personen ville gøre det. Det gør hypotesen plausibel, men i sig selv forudsiger det meget lidt.</li>
+    <li><b>En mekanisme.</b> Midlerne (hvor giften kom fra, og hvordan personen fik fat i den) og muligheden (hvornår og hvordan personen kom hen til karaflen). Det er denne del, der giver forudsigelser: indførsler i logs, genstande, der mangler, huller i alibier.</li>
+    <li><b>Hvad den forklarer.</b> Hvorfor det overraskende faktum ikke længere er overraskende, hvis hypotesen er sand.</li>
+  </ul>
+  <p>Jo mere præcis mekanismen er, jo mere følger der af den, og jo lettere er den at teste. Prisen er, at en meget præcis hypotese oftere er forkert på en detalje. Det er en god handel: en hypotese, der ikke kan være forkert, kan heller ikke testes.</p>
+  <p>Vær forsigtige med redningsforsøg. Når et faktum ikke passer, og I tilføjer en ekstra antagelse for at redde jeres hypotese (en medskyldig, en hemmelig affære, en løgn for at dække over nogen), så skal tilføjelsen have sine egne beviser. Ellers har I gjort hypotesen sværere at modbevise uden at gøre den bedre underbygget.</p>
+
+  <h3 id="g-pred">2. At udlede forudsigelser</h3>
+  <p>En forudsigelse er det, der også må være sandt, hvis hypotesen er sand. Brug skabelonen: <i>Hvis [hypotese], så burde vi finde [observation] i [type kilde]. Hvis ikke, er [hvilken del] i tvivl.</i></p>
+  <p>En brugbar forudsigelse kan vise sig at være forkert. De mest brugbare er dem, hvor to af jeres hypoteser forventer forskellige ting, for så kan én observation skelne mellem dem. Læg også mærke til, hvad jeres deduktion hviler på: en konklusion kan følge perfekt af sine præmisser og alligevel være forkert, hvis en præmis er det.</p>
+
+  <h3 id="g-test">3. At teste</h3>
+  <p>Skriv ned, hvad I faktisk fandt, og om det understøtter eller modsiger forudsigelsen. Når jeres test bygger på et mønster, fx en rutine, en log over mange dage eller flere lignende tilfælde, ræsonnerer I induktivt: fra observerede tilfælde til et, I ikke har observeret. Spørg, hvor stærkt mønstret er, og om dette tilfælde hører til det.</p>
+  <p>Test er forskellige i styrke (Van Evera 1997; Collier 2011). En <b>hoop-test</b> tjekker en nødvendig betingelse: gerningspersonen må have kunnet komme hen til karaflen. At dumpe den udelukker en hypotese, men at bestå den beviser ikke meget, fordi flere personer består. En <b>smoking gun-test</b> tjekker noget, der bekræfter stærkt, hvis det findes, fx belastende beviser i nogens besiddelse. At det ikke findes, udelukker ingen. Og en smoking gun kan plantes.</p>
+
+  <h3 id="g-ex">4. Et gennemarbejdet eksempel uden for sagen</h3>
+  <div class="example">
+  <p><b>Overraskende faktum.</b> En projektgruppes fælles mappe blev slettet fredag kl. 20.40. Ingen vil vedstå det.</p>
+  <p><b>H1.</b> Anna. Motiv: hun var uenig i gruppens analyse. Midler: hendes eget login. Mulighed: hun arbejdede online fredag aften. Forklarer: sletningen skete på et tidspunkt, hvor hun var aktiv.</p>
+  <p><b>H2.</b> Ingen person: en synkroniseringsfejl i skytjenesten.</p>
+  <p><b>F1, fra H1.</b> Hvis Anna slettede den, burde serverloggen vise sletningen fra hendes konto kl. 20.40. Hvis ikke, falder midler-delen af H1.</p>
+  <p><b>F2, skelner mellem H1 og H2.</b> Hvis det var en synkroniseringsfejl, burde andre mapper, der blev synkroniseret samtidig, også være beskadiget. H1 forudsiger, at kun denne mappe er ramt.</p>
+  <p><b>T1, tester F2.</b> Kun denne mappe var ramt: det taler for H1 frem for H2. Men tjenestens historik viser synkroniseringsfejl i 3 af de sidste 50 synkroniseringer, og de ramte altid kun én mappe. Det mønster (induktion) svækker testen: tab af en enkelt mappe er også det, H2 ville give.</p>
+  </div>
+
+  <h3 id="g-research">5. Fra godset til jeres forskningsdesign</h3>
+  <p>Hvert trin i spillet har et modstykke i samfundsvidenskabelig forskning:</p>
+  <ul>
+    <li><b>Det overraskende faktum</b> er jeres forskningsgåde: noget, eksisterende forklaringer ikke kan redegøre for. At tage udgangspunkt i det og foreslå en forklaring er abduktion (Peirce, Collected Papers 5.171; Timmermans og Tavory 2012).</li>
+    <li><b>Person, motiv og mekanisme</b> svarer til aktører, deres interesser og den kausale mekanisme, der forbinder en årsag med et udfald. Samfundsvidenskabelige forklaringer er stærkere, når de angiver, hvordan et udfald frembringes, og ikke kun hvilke faktorer der hænger sammen med det (Hedström og Ylikoski 2010).</li>
+    <li><b>Forudsigelser</b> er jeres teoris observerbare implikationer: det, I burde se i jeres data, hvis teorien holder (King, Keohane og Verba 1994, kap. 1). En teori uden observerbare implikationer kan ikke testes.</li>
+    <li><b>Test</b> er jeres analyse. Hoop-test og smoking gun-test er standardværktøjer i process tracing (Collier 2011; Beach og Pedersen 2019).</li>
+    <li><b>Induktion</b> er generalisering fra jeres cases, interviews eller stikprøve. Styrken afhænger af, hvor mange tilfælde I har, hvordan de er udvalgt, og om det nye tilfælde tilhører samme population.</li>
+    <li><b>Redningsforsøg</b> er de hjælpeantagelser, forskere tilføjer, når data ikke passer med en foretrukken teori. De kan være legitime, men kun hvis de selv bliver testet.</li>
+  </ul>
+  <div class="example">
+  <p><b>Et eksempel.</b> Deltagelsen i en kommunes samskabelsesproces om en lokal klimaplan faldt kraftigt efter den anden workshop.</p>
+  <p><b>Svag hypotese:</b> borgerne mistede interessen. Den nævner hverken aktør eller mekanisme, så næsten alle data passer med den.</p>
+  <p><b>Præcis hypotese:</b> på den anden workshop fremlagde kommunen et færdigt udkast til planen (mekanisme), som signalerede, at beslutningerne allerede var truffet, så de borgere, der var kommet for at påvirke planen (aktører og motiv), holdt op med at komme.</p>
+  <p><b>Forudsigelser:</b> deltagelsen burde falde efter fremlæggelsen af udkastet, ikke før. Dem, der faldt fra, burde nævne manglende indflydelse i interviews. Deltagere, der kom af andre grunde, fx for at møde naboer, burde oftere blive. <b>Konkurrerende forklaring:</b> workshopperne faldt sammen med ferien. Den forudsiger et tilsvarende fald i andre kommunale møder samme måned, og det er en test, der skelner mellem de to.</p>
+  </div>
+  <h3>Litteratur</h3>
+  <p class="small">Beach, D. og Pedersen, R. B. (2019) <i>Process-Tracing Methods: Foundations and Guidelines</i>, 2. udg. University of Michigan Press.<br>
+  Collier, D. (2011) Understanding process tracing. <i>PS: Political Science and Politics</i> 44(4), 823\u2013830.<br>
+  Hedstr\u00f6m, P. og Ylikoski, P. (2010) Causal mechanisms in the social sciences. <i>Annual Review of Sociology</i> 36, 49\u201367.<br>
+  King, G., Keohane, R. O. og Verba, S. (1994) <i>Designing Social Inquiry</i>. Princeton University Press.<br>
+  Peirce, C. S. (1931\u20131958) <i>Collected Papers</i>, bd. 5. Harvard University Press.<br>
+  Timmermans, S. og Tavory, I. (2012) Theory construction in qualitative research: from grounded theory to abductive analysis. <i>Sociological Theory</i> 30(3), 167\u2013186.<br>
+  Van Evera, S. (1997) <i>Guide to Methods for Students of Political Science</i>. Cornell University Press.</p>
+  <div class="row" style="margin-top:18px"><button class="btn primary" id="tofiles">Start efterforskningen</button></div>
+  </div>`;
+}
+
+
+function finalView(){
+  if (state.submitted && CONFIG.exercises && !state.post){
+    if (!state.exStart.post){ state.exStart.post = Date.now(); ev("exercise-start","post"); save(); }
+    return `<div class="panel"><h2>${t("submittedTitle")}</h2><p>${t("postIntro")}</p></div>${exerciseForm("post", state.formOrder[1])}`;
+  }
+  if (state.submitted){
+    const json = JSON.stringify(state.submitted, null, 1);
+    return `<div class="panel"><h2>${t("submittedTitle")}</h2>
+      <p>${t("submittedP")}</p>
+      <p class="small muted">${state.submitted.researchConsent === "yes" ? t("researchAgreed") : t("researchDeclined")} ${CONFIG.googleForm.action ? t("sentToForm") + " " : ""}${t("fileHint")}</p>
+      <div class="row"><button class="btn primary" id="dl">${t("download")}</button><button class="btn quiet" id="copy">${t("copyText")}</button><span class="small" id="copymsg"></span></div>
+      <textarea readonly style="margin-top:10px;min-height:8em;font-size:.8rem" id="payload">${esc(json)}</textarea></div>
+      ${exerciseFeedback(state.post)}`;
+  }
+  const f = (id, label, hint) => `<label class="field"><span>${t(label)}</span><textarea id="${id}"></textarea><div class="hint">${t(hint)}</div></label>`;
+  return `<div class="panel">
+    <h2>${t("finalTitle")}</h2>
+    <p class="small muted">${t("finalHint")}</p>
+    <label class="field"><span>${t("accuseQ")}</span><select id="acc"><option value="">${t("choose")}</option>${CHARACTERS.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("")}<option value="Undecided">${t("undecided")}</option></select></label>
+    ${f("a-hyp","fHyp","fHypHint")}
+    ${f("a-ded","fDed","fDedHint")}
+    ${f("a-ind","fInd","fIndHint")}
+    ${f("a-alt","fAlt","fAltHint")}
+    ${f("a-unc","fUnc","fUncHint")}
+    <label class="field"><span>${t("confidence")}</span><select id="conf">${[1,2,3,4,5].map(n => `<option value="${n}" ${n===3 ? "selected" : ""}>${t("conf"+n)}</option>`).join("")}</select></label>
+    <fieldset class="consent"><legend>${t("consentLegend")}</legend>
+      <p class="small">${esc(t("consentText", CONFIG.researchContact))}</p>
+      <label class="choice"><input type="radio" name="consent" value="yes"><span>${t("consentYes")}</span></label>
+      <label class="choice"><input type="radio" name="consent" value="no"><span>${t("consentNo")}</span></label>
+    </fieldset>
+    <p class="small" id="finerr" style="color:var(--warn)"></p>
+    <button class="btn primary" id="submit">${t("submitBtn")}</button>
+  </div>`;
+}
+
+/* ---------- exercises before and after, and the later individual retest ---------- */
+function exerciseForm(phase, form){
+  const ex = EXERCISES[form];
+  const ta = (id, label) => `<label class="field"><span>${t(label)}</span><textarea class="short" id="${id}"></textarea></label>`;
+  const likert = phase === "post" ? `<div class="field"><span style="font-weight:700;display:block;margin-bottom:6px">${t("likertQ")}</span>
+    ${EXPERIENCE.map(q => `<div class="mcq"><p>${esc(q.text)}</p><select id="x-l-${q.id}" aria-label="${esc(t("agreement"))}"><option value="">${t("choose")}</option>${[1,2,3,4,5].map(n => `<option>${n}</option>`).join("")}</select></div>`).join("")}
+    <label class="field" style="margin-top:8px"><span>${t("commentQ")}</span><textarea class="short" id="x-comment"></textarea></label></div>` : "";
+  return `<div class="panel">
+    <p><b>${t("surprising")}</b> ${esc(ex.fact)}</p>
+    ${ta("x-expl","exExpl")}
+    ${ta("x-p1","exP1")}
+    ${ta("x-p2","exP2")}
+    ${ta("x-rival","exRival")}
+    ${ta("x-disc","exDisc")}
+    <div class="field"><span style="font-weight:700;display:block;margin-bottom:6px">${t("classifyQ")}</span>
+    ${ex.items.map((it,i) => `<div class="mcq"><p>${esc(it.text)}</p><select id="x-m${i}" aria-label="${esc(t("reasoningType"))}"><option value="">${t("choose")}</option>${["abduction","deduction","induction"].map(k => `<option value="${k}">${t("t_"+k)}</option>`).join("")}</select></div>`).join("")}</div>
+    ${likert}
+    <p class="small" id="x-err" style="color:var(--warn)"></p>
+    <div class="row"><button class="btn primary" id="ex-save">${phase==="pre" ? t("saveGoGuide") : t("saveEx")}</button>
+    ${TEST ? `<button class="btn quiet" id="ex-skip">Skip (test mode)</button>` : ""}</div>
+  </div>`;
+}
+function exerciseScreen(){
+  if (!state.exStart.pre){ state.exStart.pre = Date.now(); ev("exercise-start","pre"); save(); }
+  return `<div class="start stack">
+    <h1>${esc(CONFIG.title)}</h1>
+    <div class="panel"><h2>${esc(t("warmTitle", state.team))}</h2><p>${t("warmText")}</p></div>
+    ${exerciseForm("pre", state.formOrder[0])}
+  </div>`;
+}
+function collectExercise(phase, form, started){
+  const v = id => ($(id)?.value || "").trim();
+  const ex = EXERCISES[form];
+  const answers = { explanation:v("#x-expl"), prediction1:v("#x-p1"), prediction2:v("#x-p2"), rival:v("#x-rival"), discriminating:v("#x-disc") };
+  const choices = ex.items.map((_, i) => v("#x-m"+i));
+  const r = { form, lang:LANG, fact:ex.fact, answers, choices, score:choices.filter((c,i) => c === ex.items[i].answer).length, of:ex.items.length,
+              byType:["abduction","deduction","induction"].reduce((o,k) => (o[k] = ex.items.filter((it,i) => it.answer===k && choices[i]===k).length, o), {}),
+              ts:Date.now(), seconds: started ? Math.round((Date.now() - started)/1000) : null };
+  if (phase === "post"){ r.experience = Object.fromEntries(EXPERIENCE.map(q => [q.id, Number(v("#x-l-"+q.id)) || null])); r.comment = v("#x-comment"); }
+  return r;
+}
+function exerciseMissing(r, phase){
+  return Object.values(r.answers).some(a => a.length < 5) || r.choices.some(c => !c) || (phase === "post" && Object.values(r.experience).some(x => !x));
+}
+function bindExercise(phase){
+  const btn = $("#ex-save"); if (!btn) return;
+  const form = state.formOrder[phase==="pre" ? 0 : 1];
+  btn.onclick = () => {
+    const r = collectExercise(phase, form, state.exStart[phase]);
+    if (exerciseMissing(r, phase)){ $("#x-err").textContent = t("exMissing"); return; }
+    finishExercise(phase, r);
+  };
+  $("#ex-skip") && ($("#ex-skip").onclick = () => finishExercise(phase, { ...collectExercise(phase, form, state.exStart[phase]), skipped:true }));
+}
+function finishExercise(phase, r){
+  clearDrafts(["i:x-"]);
+  ev("exercise-done", { phase, seconds:r.seconds });
+  if (phase === "pre"){
+    state.pre = r; state.startedAt = Date.now(); ui.tab = "guide"; ev("tab", "guide");
+  } else {
+    state.post = r; state.submitted.post = r;
+    state.submitted.events = state.events; state.submitted.metrics = metrics();
+    sendForm({ game:"nightcap", version:4, kind:"post", lang:state.lang, cohort:CONFIG.cohort, team:state.team, researchConsent:state.submitted.researchConsent,
+               mode:state.mode, model:state.modelId, arm:state.arm, submittedAt:new Date().toISOString(), post:r });
+  }
+  save(); render(); scrollTo(0,0);
+}
+function sendForm(p){
+  const g = CONFIG.googleForm; if (!g.action || !g.entryId) return;
+  const body = new URLSearchParams(); body.append(g.entryId, JSON.stringify(p));
+  const vals = { team:p.team, kind:p.kind, consent:p.researchConsent, lang:p.lang, mode:p.mode === "ai" ? "AI (" + (p.model || "") + ")" : p.mode ? "Scripted" : "" };
+  for (const [k, id] of Object.entries(CONFIG.googleFormColumns || {})) if (id) body.append(id, vals[k] || "");
+  fetch(g.action, { method:"POST", mode:"no-cors", body }).catch(() => {});
+}
+function exerciseFeedback(r){
+  if (!r) return "";
+  const ex = EXERCISES[r.form];
+  return `<div class="panel"><h2>${t("feedbackTitle")}</h2>
+    <ul class="facts">${ex.items.map((it,i) => `<li>${esc(it.text)}<br><b>${t("t_"+it.answer)}</b>${r.choices[i] === it.answer ? t("youHad") : r.choices[i] ? esc(t("youChose", t("t_"+r.choices[i]).toLowerCase())) : ""}</li>`).join("")}</ul>
+    <p class="small muted">${t("feedbackNote")}</p></div>`;
+}
+
+function retestView(){
+  if (retest.done) return `<div class="start stack"><h1>${esc(CONFIG.title)}</h1>
+    <div class="panel"><h2>${t("savedThanks")}</h2><p>${CONFIG.googleForm.action ? t("rtSent") : ""}${t("rtFile")}</p>
+    <div class="row"><button class="btn primary" id="rt-dl">${t("download")}</button></div></div>${exerciseFeedback(retest.done.retest)}</div>`;
+  if (!retest.started) retest.started = Date.now();
+  return `<div class="start stack">
+    ${langSwitch()}
+    <h1>${esc(CONFIG.title)}</h1>
+    <div class="panel"><h2>${t("rtTitle")}</h2>
+      <p>${t("rtText")}</p>
+      <label class="field"><span>${t("rtTeam")}</span><input type="text" id="rt-team" maxlength="40"></label>
+      <fieldset class="consent"><legend>${t("consentLegend")}</legend>
+        <p class="small">${esc(t("rtConsentText", CONFIG.researchContact))}</p>
+        <label class="choice"><input type="radio" name="rt-consent" value="yes"><span>${t("rtYes")}</span></label>
+        <label class="choice"><input type="radio" name="rt-consent" value="no"><span>${t("rtNo")}</span></label>
+      </fieldset></div>
+    ${exerciseForm("retest", "C")}
+  </div>`;
+}
+function bindRetest(){
+  if ($("#rt-dl")){ $("#rt-dl").onclick = () => downloadJson(retest.done, "nightcap-retest.json"); return; }
+  document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => { setLang(b.dataset.lang); render(); });
+  $("#ex-save").onclick = () => {
+    const consent = document.querySelector("input[name=rt-consent]:checked")?.value;
+    const r = collectExercise("retest", "C", retest.started);
+    if (!consent){ $("#x-err").textContent = t("errConsent"); return; }
+    if (exerciseMissing(r, "retest")){ $("#x-err").textContent = t("exMissing"); return; }
+    retest.done = { game:"nightcap", version:4, kind:"retest", lang:LANG, cohort:CONFIG.cohort, team:($("#rt-team").value.trim() || null),
+                    researchConsent:consent, submittedAt:new Date().toISOString(), retest:r };
+    sendForm(retest.done);
+    render(); scrollTo(0,0);
+  };
+}
+function downloadJson(obj, name){
+  const blob = new Blob([JSON.stringify(obj, null, 1)], { type:"application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- process data ---------- */
+function ev(type, detail){
+  if (!state) return;
+  (state.events = state.events || []).push([Date.now() - state.createdAt, type, detail ?? null]);
+  if (state.events.length > 2000) state.events.splice(0, state.events.length - 2000);
+}
+function metrics(){
+  const E = state.events || [], all = Object.values(state.chats).flat();
+  let guideMs = 0, cur = null, since = 0;
+  for (const [tm, type, d] of E){ if (type === "tab"){ if (cur === "guide") guideMs += tm - since; cur = d; since = tm; } }
+  if (cur === "guide") guideMs += (Date.now() - state.createdAt) - since;
+  const asked = all.filter(m => m.role === "assistant");
+  const firstHyp = state.log.find(e => e.type === "hyp");
+  return {
+    guideSeconds: Math.round(guideMs/1000),
+    questions: asked.length,
+    questionsByCharacter: Object.fromEntries(Object.entries(state.chats).map(([k, v]) => [k, v.filter(m => m.role === "user").length])),
+    questionsMatchingTopic: asked.filter(m => m.topic).length,
+    aiReplies: asked.filter(m => m.source === "ai").length,
+    aiFallbacks: asked.filter(m => /fallback/.test(m.source || "")).length,
+    aiRegenerations: asked.filter(m => (m.attempts || 0) > 1).length,
+    aiMeanSeconds: (() => { const a = asked.filter(m => /^ai/.test(m.source || "") && m.ms); return a.length ? Math.round(a.reduce((x, m) => x + m.ms, 0) / a.length / 1000) : null; })(),
+    docsRead: Object.keys(state.docsOpened).length,
+    firstHypothesisSeconds: firstHyp && state.startedAt ? Math.round((firstHyp.ts - state.startedAt)/1000) : null,
+    hypothesesRejected: state.log.filter(e => e.status === "rejected").length,
+    eventMinute: state.eventAt && state.startedAt ? Math.round((state.eventAt - state.startedAt)/60000) : null
+  };
+}
+
+/* ---------- events ---------- */
+function bindGame(){
+  document.querySelectorAll(".tab[data-tab]").forEach(b => b.onclick = () => { ui.tab = b.dataset.tab; ui.doc = null; ev("tab", ui.tab); save(); render(); scrollTo(0,0); });
+  document.querySelectorAll("[data-doc]").forEach(b => b.onclick = () => openDoc(b.dataset.doc));
+  $("#back") && ($("#back").onclick = () => { ui.doc = null; render(); });
+  $("#codebtn") && ($("#codebtn").onclick = () => {
+    const v = $("#code").value.trim().toUpperCase();
+    ev("code", v === CONFIG.eventCode.toUpperCase());
+    if (v === CONFIG.eventCode.toUpperCase()) unlockEvent();
+    else $("#codemsg").textContent = t("codeWrong");
+  });
+  document.querySelectorAll("[data-char]").forEach(b => b.onclick = () => { ui.char = b.dataset.char; render(); scrollChat(); });
+  document.querySelectorAll("[data-chip]").forEach(b => b.onclick = () => { const q = $("#q"); q.value = t("chipQ", b.dataset.chip.toLowerCase()); q.focus(); });
+  $("#ask") && ($("#ask").onsubmit = ev => { ev.preventDefault(); const q = $("#q").value.trim(); if (q && !ui.busy) ask(ui.char, q); });
+  document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => {
+    if (ui.form?.type !== b.dataset.add) clearDrafts(LOG_DRAFTS);
+    ui.form = { type:b.dataset.add }; state.drafts = state.drafts || {}; state.drafts.__form = b.dataset.add; save(); render(); ($("#f-text") || $("#h-who"))?.focus(); });
+  $("#f-cancel") && ($("#f-cancel").onclick = () => { ui.form = null; clearDrafts(LOG_DRAFTS); if (state.drafts) delete state.drafts.__form; save(); render(); });
+  $("#newgamebtn") && ($("#newgamebtn").onclick = confirmNewGame);
+  $("#tofiles") && ($("#tofiles").onclick = () => { ui.tab = "inv"; ui.doc = null; ev("tab", "inv"); save(); render(); scrollTo(0,0); });
+  $("#hidehelp") && ($("#hidehelp").onclick = () => { state.hideHelp = true; ev("help-hidden"); save(); render(); });
+  $("#logbtn") && ($("#logbtn").onclick = () => { ui.logOpen = true; ev("log-open"); document.body.classList.add("logopen"); });
+  $("#logclose") && ($("#logclose").onclick = () => { ui.logOpen = false; document.body.classList.remove("logopen"); });
+  $("#toguide") && ($("#toguide").onclick = () => { ui.tab = "guide"; ui.doc = null; render(); scrollTo(0,0); });
+  $("#f-save") && ($("#f-save").onclick = saveEntry);
+  document.querySelectorAll("[data-status]").forEach(s => s.onchange = () => { const e = state.log.find(x => x.id===s.dataset.status); e.status = s.value; (e.statusHistory = e.statusHistory || []).push([Date.now() - state.createdAt, s.value]); ev("status", { id:e.id, status:s.value }); save(); render(); });
+  $("#submit") && ($("#submit").onclick = submitFinal);
+  if (ui.tab === "final") bindExercise("post");
+  $("#dl") && ($("#dl").onclick = download);
+  $("#copy") && ($("#copy").onclick = async () => { try { await navigator.clipboard.writeText($("#payload").value); $("#copymsg").textContent = t("copied"); } catch(e){ $("#payload").select(); $("#copymsg").textContent = t("copyManual"); } });
+  $("#reload") && ($("#reload").onclick = async () => {
+    $("#reload").disabled = true;
+    const t0 = Date.now();
+    try { await startEngine(state.modelId, r => { $("#reloadtext").textContent = r.text || ""; }); ev("model-reload", { seconds:Math.round((Date.now()-t0)/1000), storage:engineStorage }); save(); render(); warmUp(); }
+    catch(e){ $("#reloadtext").textContent = await explainFailure(e, state.modelId); $("#reload").disabled = false; }
+  });
+  if (TEST){
+    $("#t-unlock").onclick = () => { state.testUnlock = !state.testUnlock; save(); render(); };
+    $("#t-event").onclick = () => { if (!state.eventUnlocked) unlockEvent(); };
+    $("#t-reset").onclick = () => { if (confirm("Delete this team's progress on this device?")){ try{ localStorage.removeItem(CONFIG.storageKey); }catch(e){} state = null; render(); } };
+  }
+  if (ui.tab === "inv") scrollChat();
+}
+const scrollChat = () => { const c = $("#chat"); if (c) c.scrollTop = c.scrollHeight; };
+
+function confirmNewGame(){
+  const dlg = $("#newgame");
+  dlg.innerHTML = `<div class="dlg" style="--c:var(--warn)">
+    <h2>${t("ngTitle")}</h2>
+    <p>${esc(t("ngText", state.team, !!state.submitted))}</p>
+    ${state.submitted ? `<p>${t("ngSubmitted")}</p>` : ""}
+    <label class="field"><span>${esc(t("ngType", state.team))}</span><input type="text" id="ng-name" autocomplete="off"></label>
+    <div class="row"><button class="btn primary" id="ng-yes" disabled>${t("ngYes")}</button><button class="btn quiet" id="ng-no">${t("ngNo")}</button></div></div>`;
+  dlg.showModal();
+  const inp = $("#ng-name"), yes = $("#ng-yes");
+  inp.oninput = () => yes.disabled = inp.value.trim().toLowerCase() !== state.team.trim().toLowerCase();
+  $("#ng-no").onclick = () => dlg.close();
+  yes.onclick = () => {
+    try { localStorage.removeItem(CONFIG.storageKey); } catch(e){}
+    dlg.close(); state = null;
+    ui = { tab:"guide", doc:null, char:"marianne", form:null, busy:false, bridgeQueue:[], err:"" };
+    render(); scrollTo(0,0);
+  };
+  inp.focus();
+}
+function openDoc(id){
+  ui.doc = id;
+  if (!state.docsOpened[id]){ state.docsOpened[id] = Date.now(); }
+  ev("doc", id); save();
+  const d = DOCS.find(x => x.id === id);
+  render(); scrollTo(0,0);
+  if (d.bridge) queueBridge(d.bridge);
+}
+function unlockEvent(){
+  state.eventUnlocked = true; state.eventAt = Date.now(); ev("event"); save();
+  ui.tab = "inv"; openDoc("D_COAT");
+  queueBridge("BC_CONFIRM");
+}
+function saveEntry(){
+  const f = ui.form, val = id => ($(id)?.value || "").trim(), err = m => { $("#f-err").textContent = m; };
+  const n = state.log.filter(e => e.type===f.type).length + 1;
+  const e = { id:"e"+state.seq, type:f.type, n, ts:Date.now() };
+  const scaffold = state.armCfg?.scaffold !== false;
+  if (!scaffold){
+    const text = val("#f-text");
+    if (text.length < 8) return err(t("errSentence"));
+    e.text = text;
+    if (f.type === "hyp") e.status = "open";
+    else e.link = val("#f-link");
+    if (f.type === "test"){ e.evidence = [...document.querySelectorAll(".f-ev:checked")].map(x => x.value); e.outcome = val("#f-out"); }
+  } else if (f.type === "hyp"){
+    const who = val("#h-who"), motive = val("#h-motive"), means = val("#h-means"), opp = val("#h-opp"), expl = val("#h-expl");
+    if (!who) return err(t("errWho"));
+    if (means.length < 8 || opp.length < 8) return err(t("errMeansOpp"));
+    e.fields = { who, motive, means, opportunity:opp, explains:expl };
+    const whoLabel = who === "multiple" ? t("whoMulti") : who === "other" ? t("whoOther") : who;
+    e.text = [whoLabel + ".", motive && t("lblMotive") + motive, t("lblMeans") + means, t("lblOpp") + opp, expl && t("lblExplains") + expl].filter(Boolean).join("\n");
+    e.status = "open";
+  } else {
+    const text = val("#f-text");
+    if (text.length < 8) return err(t("errSentence"));
+    e.link = val("#f-link");
+    if (f.type === "pred"){
+      const doubt = val("#p-doubt");
+      e.disc = $("#p-disc").checked;
+      e.src = val("#p-src");
+      e.text = text + "\n" + t("lblWhere") + t("src_" + e.src).toLowerCase() + "." + (doubt ? "\n" + t("lblNotFound") + doubt : "");
+    } else {
+      const pat = val("#t-pattern");
+      e.evidence = [...document.querySelectorAll(".f-ev:checked")].map(x => x.value);
+      e.outcome = val("#f-out");
+      if (pat) e.pattern = pat;
+      e.text = text + (pat ? "\n" + t("lblPattern") + pat : "");
+    }
+  }
+  state.seq++;
+  const before = tier();
+  state.log.push(e); ui.form = null; clearDrafts(LOG_DRAFTS); if (state.drafts) delete state.drafts.__form;
+  ev("entry", { id:e.id, type:e.type, link:e.link || null });
+  if (tier() > before) ev("tier", tier());
+  save(); render();
+  if (f.type === "hyp" && counts().h === 2) queueBridge("BC_ABDUCT");
+  if (tier() > before) flash(t("released"));
+}
+function flash(msg){
+  const b = $("#banner"); if (!b) return;
+  b.innerHTML = `<div class="banner"><div>${esc(msg)}</div></div>`;
+  setTimeout(() => { if (b.innerHTML.includes(esc(msg))) b.innerHTML = ""; tick(); }, 6000);
+}
+
+/* ---------- bridge cards ---------- */
+function queueBridge(id){
+  if (state.bridge[id] || ui.bridgeQueue.includes(id)) return;
+  if (state.armCfg && state.armCfg.bridges === false){ ev("bridge-suppressed", id); return; }
+  ev("bridge-shown", id);
+  ui.bridgeQueue.push(id);
+  if (!$("#bridge").open) showBridge();
+}
+function showBridge(){
+  const id = ui.bridgeQueue[0]; if (!id) return;
+  const b = BRIDGES[id], dlg = $("#bridge");
+  dlg.innerHTML = `<div class="dlg t-${b.kind}">
+    <p class="kind">${KIND_INF[b.kind][0].toUpperCase()+KIND_INF[b.kind].slice(1)}</p>
+    <h2>${esc(b.title)}</h2><p>${esc(b.text)}</p>
+    <p class="research small">${esc(b.research)}</p>
+    <label class="field"><span>${esc(b.question)}</span><textarea id="b-ans"></textarea><div class="hint">${t("bridgeHint")}</div></label>
+    <button class="btn primary" id="b-save" disabled>${t("bridgeSave")}</button></div>`;
+  dlg.showModal();
+  const shownAt = Date.now();
+  const ta = $("#b-ans"), btn = $("#b-save");
+  ta.oninput = () => btn.disabled = ta.value.trim().length < 15;
+  btn.onclick = () => {
+    state.bridge[id] = { answer: ta.value.trim(), ts: Date.now(), seconds: Math.round((Date.now() - shownAt)/1000) }; ev("bridge-answered", id); save();
+    ui.bridgeQueue.shift(); dlg.close();
+    if (ui.bridgeQueue.length) showBridge();
+  };
+}
+$("#bridge").addEventListener("cancel", e => e.preventDefault());
+
+/* ---------- interviews ---------- */
+function matchTopic(c, q){
+  const s = q.toLowerCase(); let best = null, score = 0;
+  for (const t of c.topics){ const k = t.keywords.filter(w => s.includes(w)).length; if (k > score){ score = k; best = t; } }
+  return best;
+}
+async function ask(charId, question){
+  const c = CHARACTERS.find(x => x.id === charId);
+  const chat = state.chats[charId] = state.chats[charId] || [];
+  chat.push({ role:"user", content:question, t:Date.now() });
+  clearDrafts(["i:q"]);
+  ui.busy = true; save(); render();
+  const topic = matchTopic(c, question);
+  const unlocked = topic ? met(topic.requires) : true;
+  const variant = topic ? (unlocked ? topic : (topic.locked || null)) : null;
+  let reply, source = "scripted", attempts = 0;
+  const t0 = Date.now();
+  if (state.mode === "ai" && engine && !state.aiOff){
+    const onText = s => { const el = $("#pending"); if (el){ el.textContent = s || "..."; scrollChat(); } };
+    try { const out = await aiReply(c, variant, question, onText); reply = out.text; source = out.source; attempts = out.attempts; }
+    catch(e){ console.error(e); reply = scripted(c, variant); source = "error-fallback"; }
+    // If the model keeps producing unreadable text, this device cannot run it properly: switch to scripted answers.
+    if (garbledCount >= 3 && !state.aiOff){ state.aiOff = "garbled"; ev("ai-off", "garbled"); ui.flashMsg = t("aiGarbled"); }
+  } else reply = scripted(c, variant);
+  chat.push({ role:"assistant", content:reply, t:Date.now(), topic:topic?.id || null, unlocked, source, attempts, ms:Date.now() - t0 });
+  ev("ask", { who:charId, topic:topic?.id || null, unlocked, source });
+  if (variant?.testimony && !state.testimonies[variant.testimony.id]) state.testimonies[variant.testimony.id] = { ...variant.testimony, ts:Date.now() };
+  ui.busy = false; save(); render(); $("#q")?.focus();
+}
+function scripted(c, v){ return v ? v.line : c.deflections[Math.floor(Math.random()*c.deflections.length)]; }
+
+async function aiReply(c, v, question, onText){
+  const { sys, allowed } = buildSystem(c, v, question);
+  let system = sys, lastProblem = null;
+  const history = (state.chats[c.id] || []).slice(-7, -1).map(m => ({ role:m.role, content:m.content }));
+  // On slow laptops a regeneration doubles the wait, so give up after one attempt there.
+  const maxAttempts = state.speedTest?.verdict === "slow" ? 1 : 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt++){
+    const raw = await generate([{ role:"system", content:system }, ...history, { role:"user", content:question }], onText);
+    const [said, note] = splitNote(raw);
+    const problem = check(said, c, allowed);
+    if (!problem){ keepDetails(c, note ? [note] : []); return { text:said, source:"ai", attempts:attempt + 1 }; }
+    lastProblem = problem;
+    if (problem === "garbled") garbledCount++;
+    onText("");
+    system += `\nYour previous answer broke a rule (${problem}). Keep strictly to what you know.`;
+  }
+  return { text:scripted(c, v), source: lastProblem === "garbled" ? "ai-garbled-fallback" : "ai-fallback", attempts:maxAttempts };
+}
+// A short system prompt: weak graphics spend much of their time reading the prompt before answering.
+function buildSystem(c, v, question){
+  const brief = v ? v.brief : "Nothing specific is asked. Answer briefly in character. Do not invent times, places, evidence or anyone's movements; say you don't know if needed.";
+  const lower = String(question || "").toLowerCase();
+  const rumours = (state?.emergent || []).filter(e => e.who === c.id || lower.includes(nameOf(e.who).split(" ")[0].toLowerCase())).slice(-4);
+  const sys = `You are ${c.name} (${c.role}), questioned by investigators the morning after Viktor Lund was poisoned at Kragsholm Manor. He died in hospital in the night.
+Personality: ${c.persona}
+You know:
+${c.facts}
+For this question: ${brief}${rumours.length ? "\nYou said earlier: " + rumours.map(r => r.text).join(" ") : ""}
+Rules: speak as ${c.name.split(" ")[0]}, in ${t("answerIn")}, in 1 to 3 short sentences, whatever language the question is in. Mention only clock times given above. Never invent evidence or anyone's movements. Never name a murderer or confess.
+If you add a small personal detail about yourself, put it on a new last line: NOTE: the detail in at most 12 words.`;
+  return { sys, allowed:new Set([...times(c.facts), ...times(brief)]) };
+}
+// Streams the answer so it appears word by word, and stops early if the output turns unreadable.
+async function generate(messages, onText){
+  let full = "";
+  try {
+    const stream = await engine.chat.completions.create({ messages, temperature:0.7, max_tokens:CONFIG.maxAnswerTokens, stream:true });
+    for await (const chunk of stream){
+      full += chunk.choices?.[0]?.delta?.content || "";
+      const shown = splitNote(full)[0];
+      onText && onText(shown);
+      if (full.length > 40 && looksGarbled(shown)){ try { engine.interruptGenerate(); } catch(e){} break; }
+    }
+  } catch(e){
+    if (full) return full;
+    const r = await engine.chat.completions.create({ messages, temperature:0.7, max_tokens:CONFIG.maxAnswerTokens });
+    full = r.choices[0].message.content || "";
+    onText && onText(splitNote(full)[0]);
+  }
+  return full;
+}
+function splitNote(raw){
+  const parts = String(raw).split(/\n?\s*NOTE:\s*/i);
+  return [parts[0].trim().replace(/^["“]+|["”]+$/g, "").slice(0, 700), (parts[1] || "").trim().split("\n")[0]];
+}
+async function warmUp(){ try { await engine.chat.completions.create({ messages:[{ role:"user", content:"Hi" }], max_tokens:2 }); } catch(e){} }
+// Measures how long a typical answer will take on this laptop. The first call compiles the model
+// for the graphics chip, which is slow once, so it is not timed.
+async function speedTest(modelId){
+  await warmUp();
+  const c = CHARACTERS.find(x => x.id === "selma");
+  const { sys } = buildSystem(c, c.topics[0], "Where were you after dinner?");
+  const t0 = performance.now();
+  const r = await engine.chat.completions.create({ messages:[{ role:"system", content:sys }, { role:"user", content:"Where were you after dinner?" }], max_tokens:48, temperature:0 });
+  const ms = performance.now() - t0;
+  const u = r.usage || {}, ex = u.extra || {}, toks = u.completion_tokens || 48;
+  const expected = Math.round(CONFIG.maxAnswerTokens * 0.7);
+  const projected = (ex.prefill_tokens_per_s && ex.decode_tokens_per_s && u.prompt_tokens)
+    ? u.prompt_tokens / ex.prefill_tokens_per_s + expected / ex.decode_tokens_per_s
+    : (ms / 1000) * Math.max(1, expected / toks);
+  const seconds = Math.round(projected);
+  return { model:modelId, seconds, testMs:Math.round(ms), tokens:toks, decodeTps:ex.decode_tokens_per_s || null, prefillTps:ex.prefill_tokens_per_s || null,
+           verdict: seconds <= CONFIG.speed.good ? "good" : seconds <= CONFIG.speed.ok ? "ok" : "slow" };
+}
+function parse(raw){
+  let obj = null;
+  try { obj = JSON.parse(raw); } catch(e){ const m = String(raw).match(/\{[\s\S]*\}/); if (m) try { obj = JSON.parse(m[0]); } catch(e2){} }
+  if (!obj || typeof obj.reply !== "string") obj = { reply:String(raw).replace(/[{}"]/g,"").trim(), new_details:[] };
+  obj.reply = obj.reply.trim().slice(0, 700);
+  if (!Array.isArray(obj.new_details)) obj.new_details = [];
+  return obj;
+}
+// Detects the unreadable output some graphics cards produce (random tokens, code fragments,
+// Chinese characters in an English or Danish answer).
+function looksGarbled(text){
+  const s = String(text);
+  if (!s.trim()) return true;
+  const foreign = (s.match(/[^\p{Script=Latin}\p{N}\p{P}\p{Zs}\s'’"“”]/gu) || []).length;
+  if (foreign / s.length > 0.05) return true;
+  const code = (s.match(/[{}<>_=#\\|]|\w\.\w+\(|[a-z][A-Z][a-z]|\(\)/g) || []).length;
+  if (code >= 3) return true;
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length && words.reduce((a, w) => a + w.length, 0) / words.length > 11) return true;
+  return false;
+}
+function check(reply, c, allowed){
+  if (!reply || reply.length < 2) return "empty answer";
+  if (looksGarbled(reply)) return "garbled";
+  for (const re of [...GLOBAL_FORBIDDEN, ...(c.forbidden||[])]) if (re.test(reply)) return "said something the character would never say";
+  for (const t of times(reply)) if (!allowed.has(t)) return `mentioned the time ${t}, which you do not know`;
+  return null;
+}
+function keepDetails(c, list){
+  for (const d of list.slice(0,2)){
+    if (typeof d !== "string") continue;
+    const s = d.trim();
+    if (s.length < 8 || s.length > 160 || PROTECTED.test(s)) continue;
+    if (state.emergent.some(e => e.text.toLowerCase() === s.toLowerCase())) continue;
+    state.emergent.push({ who:c.id, text:s, ts:Date.now() });
+  }
+  if (state.emergent.length > 40) state.emergent = state.emergent.slice(-40);
+}
+
+/* ---------- final submission ---------- */
+function submitFinal(){
+  const v = id => $(id).value.trim();
+  const acc = v("#acc");
+  const consent = document.querySelector("input[name=consent]:checked")?.value;
+  const fields = { hypothesis:v("#a-hyp"), deduction:v("#a-ded"), induction:v("#a-ind"), alternatives:v("#a-alt"), uncertainty:v("#a-unc") };
+  if (!acc){ $("#finerr").textContent = t("errAccuse"); return; }
+  if (Object.values(fields).some(x => x.length < 10)){ $("#finerr").textContent = t("errSections"); return; }
+  if (!consent){ $("#finerr").textContent = t("errConsent"); return; }
+  if (!confirm(t("confirmSubmit"))) return;
+  ev("submit", acc);
+  clearDrafts(["i:a-","i:acc","i:conf","r:consent"]);
+  state.submitted = {
+    game:"nightcap", version:4, kind:"final", lang:state.lang, team:state.team, researchConsent:consent,
+    mode:state.mode, model:state.modelId, cohort:CONFIG.cohort, section:state.section || null, teamSize:state.teamSize, projectGroupSize:state.projectGroupSize || null, constellation:state.constellation || null,
+    arm:state.arm, armConfig:state.armCfg, caseVersion:CONFIG.caseVersion, submittedAt:new Date().toISOString(),
+    minutes:Math.round(elapsedMin()), accused:acc, confidence:Number(v("#conf")), argument:fields,
+    log:state.log.map(({id,type,n,text,link,status,statusHistory,evidence,outcome,fields,disc,pattern,ts}) => ({id,type,n,text,link,status,statusHistory,evidence,outcome,fields,disc,pattern,t:ts - state.createdAt})),
+    bridge:state.bridge, docs:Object.keys(state.docsOpened), testimonies:Object.keys(state.testimonies),
+    event:state.eventUnlocked, emergent:state.emergent.map(e => ({ who:e.who, text:e.text })), counts:counts(),
+    pre:state.pre || null, modelLoad:state.modelLoad || null, speedTest:state.speedTest || null, gpu:state.gpu || null, metrics:metrics(),
+    events:state.events,
+    chats:Object.fromEntries(Object.entries(state.chats).map(([k, list]) => [k, list.map(m => ({ t:(m.t||0) - state.createdAt, role:m.role, content:m.content, topic:m.topic, unlocked:m.unlocked, source:m.source, attempts:m.attempts }))]))
+  };
+  save();
+  // The collection sheet gets the core submission in one row and the process trace in another,
+  // so that neither exceeds the sheet's cell size. The downloadable file keeps everything.
+  const { events, chats, ...core } = state.submitted;
+  sendForm(core);
+  let trace = { game:"nightcap", version:4, kind:"trace", lang:state.lang, cohort:CONFIG.cohort, team:state.team, researchConsent:consent, events, chats };
+  if (JSON.stringify(trace).length > 45000){
+    trace.chats = Object.fromEntries(Object.entries(chats).map(([k, l]) => [k, l.map(m => m.role === "assistant" ? { ...m, content:m.content.slice(0, 160) } : m)]));
+    trace.trimmed = "replies shortened";
+  }
+  if (JSON.stringify(trace).length > 45000){ trace.chats = Object.fromEntries(Object.entries(chats).map(([k, l]) => [k, l.filter(m => m.role === "user")])); trace.trimmed = "replies removed"; }
+  if (JSON.stringify(trace).length > 45000){ trace.events = events.slice(-600); trace.trimmed = "replies removed, early events removed"; }
+  sendForm(trace);
+  render(); scrollTo(0,0);
+}
+function download(){
+  const blob = new Blob([JSON.stringify(state.submitted, null, 1)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "nightcap-" + state.team.replace(/[^\w-]+/g,"_") + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- clock ---------- */
+function tick(){
+  if (!state) return;
+  const m = elapsedMin(), el = $("#clock");
+  if (el){ const s = Math.floor(m*60); el.textContent = `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")} ${t("of")} ${CONFIG.sessionMinutes}:00`; }
+  const b = $("#banner");
+  if (b && !b.innerHTML && !state.submitted){
+    if (m >= CONFIG.sessionMinutes) b.innerHTML = `<div class="banner"><div>${t("timeUp")}</div></div>`;
+    else if (m >= CONFIG.finalCallMinute) b.innerHTML = `<div class="banner"><div>${t("finalCall", Math.ceil(CONFIG.sessionMinutes - m))}</div></div>`;
+  }
+}
+setInterval(tick, 1000);
+render();
+</script>
+</body>
+</html>
