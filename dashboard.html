@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Last Nightcap: plenary dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E6EBEE;--paper:#FFF;--ink:#17202A;--muted:#55606B;--line:#C4CDD4;--abd:#6A4B9D;--ded:#1B6A64;--ind:#985709;--tag:#F2CF5B;
+  --ui:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;--type:"Special Elite","Courier New",monospace;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#131920;--paper:#1D252E;--ink:#E4E9EE;--muted:#9BA7B3;--line:#34414E;--abd:#B7A0DF;--ded:#6FC4BB;--ind:#E3A64C;--tag:#C9A83A}}
+:root[data-theme="dark"]{--bg:#131920;--paper:#1D252E;--ink:#E4E9EE;--muted:#9BA7B3;--line:#34414E;--abd:#B7A0DF;--ded:#6FC4BB;--ind:#E3A64C;--tag:#C9A83A}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 var(--ui)}
+main{max-width:1200px;margin:auto;padding:20px 16px}
+h1{font-family:var(--type);font-weight:400;font-size:clamp(1.8rem,4vw,2.6rem);margin:0 0 .2em}
+h2{font-size:1.3rem;margin:0 0 .6em} h3{font-size:1.05rem;margin:1em 0 .4em}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px;margin-top:16px}
+.muted{color:var(--muted)} .small{font-size:.88rem}
+.btn{font:inherit;border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:.4em .9em;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper)}
+input,textarea{font:inherit;color:inherit;width:100%;padding:.5em;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.bar{display:grid;grid-template-columns:minmax(9em,max-content) 1fr 2.5em;gap:8px;align-items:center;margin:6px 0}
+.warn{color:#A3281D}
+#detail p,#detail .entry{overflow-wrap:anywhere}
+.bar .fill{height:22px;background:var(--ink);border-radius:3px}
+.stat{font-size:2rem;font-weight:700;line-height:1}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.team{cursor:pointer} tr.team:hover{background:var(--bg)}
+.answers{list-style:none;padding:0;margin:0}
+.answers li{padding:8px 0;border-top:1px solid var(--line)}
+.answers b{display:inline-block;min-width:7em}
+.k-hyp{color:var(--abd);font-weight:700}.k-pred{color:var(--ded);font-weight:700}.k-test{color:var(--ind);font-weight:700}
+.entry{border-left:4px solid var(--line);padding:4px 10px;margin:6px 0;white-space:pre-line}
+ol.plan li{margin-bottom:.7em}
+.entry.hyp{border-color:var(--abd)}.entry.pred{border-color:var(--ded)}.entry.test{border-color:var(--ind)}
+details{border-top:1px solid var(--line);padding:8px 0}
+summary{cursor:pointer;font-weight:700}
+.solution{font-family:var(--type);white-space:pre-wrap;line-height:1.6}
+:focus-visible{outline:3px solid var(--abd);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1>The Last Nightcap</h1>
+  <p class="muted">Plenary dashboard. Load the teams' submissions, then work through the results by type of reasoning.</p>
+
+  <section class="panel">
+    <h2>Load submissions</h2>
+    <div class="grid">
+      <div><h3>Files from teams</h3><input type="file" id="files" accept=".json,application/json" multiple></div>
+      <div><h3>Google Sheet (published as CSV)</h3><div class="row"><input type="text" id="csv" placeholder="Paste the sheet link"><button class="btn" id="csvbtn">Load</button></div></div>
+      <div><h3>Pasted text</h3><textarea id="paste" rows="3" placeholder="Paste one or more submissions"></textarea><button class="btn" id="pastebtn" style="margin-top:6px">Add</button></div>
+    </div>
+    <div class="row" style="margin-top:10px"><label class="small" style="margin-right:auto"><input type="checkbox" id="onlyconsent" style="width:auto"> Show only teams that agreed to research use</label><button class="btn" id="export">Export exercises for blind coding</button><button class="btn" id="dataset">Export research data</button></div>
+    <p class="small" id="msg"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Plenary plan (30 minutes)</h2>
+    <p class="small muted">Work by type of reasoning, not by suspect, and keep the answer back until step 5. Ask students throughout to name their moves: was it a guess at an explanation, a consequence of one, or a pattern generalised from?</p>
+    <ol class="plan">
+      <li><b>Verdicts, without the answer (3 min).</b> Show the verdicts and confidence below. Say nothing about who was right. Note whether confidence differs between verdicts.</li>
+      <li><span class="k-hyp">Abduction (7 min).</span> Show the surprising fact. Collect first hypotheses from two or three teams. What made them attractive? Did they name a mechanism, or only a motive? Find an example of a rescue (an accomplice, an affair) and ask what evidence the addition needed. Use the answers to "More than one explanation".</li>
+      <li><span class="k-pred">Deduction (7 min).</span> Take one hypothesis and derive predictions together on the board ("if H, then..."). Then Marianne's clean glass: what follows strictly (after she poured, not after she left), and which premises does that rest on? Use "Valid is not the same as sound". Point to the teams that made predictions telling hypotheses apart.</li>
+      <li><span class="k-test">Induction and the planted card (6 min).</span> How much can 30 nights of routine support a claim about one night? Where did teams rely on a pattern without noticing? Then the planted card as a smoking gun that could be planted: contrast a team that took it as confirmation with one that asked what else would have to be true.</li>
+      <li><b>Reveal as best explanation (3 min).</b> Present Jonas as the explanation that accounts for most evidence with the fewest additions, and say what remains unproven. If a team argued well for someone else and stated its uncertainty honestly, show it and explain why it scores well.</li>
+      <li><b>Transfer (4 min).</b> Map the cycle onto their projects: puzzle, mechanism, observable implications, what their data can be generalised to. Each student writes one sentence: "If my explanation is right, I should find ___ in my data." Collect a few aloud.</li>
+    </ol>
+  </section>
+
+  <div id="out"></div>
+
+  <section class="panel">
+    <div class="row"><h2 style="margin:0;margin-right:auto">Solution and teaching notes</h2><button class="btn" id="reveal">Show</button></div>
+    <div id="sol" hidden>
+<div class="solution">Jonas Brink poisoned the decanter at about 22:48 with tablets he took from Viktor's prescription when he collected it on 14 September.
+
+Motive. Viktor's unsent email (E10) announces a review of grant reporting and says Jonas had not produced the partner statements requested on 8 September, so Jonas had reason to fear exposure well before the 14th. Selma reports he had "found out where the money went" (interview). Jonas cancelled a meeting with the external auditor (E9).
+Means. Forty tablets are missing (E5), enough for the lethal concentration in the small decanter (E1). Jonas collected the prescription (E9, and he admits it).
+Opportunity. The spare card opened the study at 22:48 (E4) while Viktor was on the terrace with Selma (interview, E11). Apart from one entry on Thursday at 14:12, the spare card had not been used since May (E8). Peter believes Viktor gave it to Jonas on Thursday for the folders (interview, unobserved), which the Thursday entry fits. Jonas's remark that "Viktor kept it himself" suggests he knew Viktor had taken it from the estate office. The bartender puts Jonas out of the bar from about 22:45 to just before 23:00 (E6).
+Planting. The only person at the coats after 22:50 was Jonas, at 22:55 (E13). His scarf story is weak.
+
+Why not Marianne. Her 22:34 entry fits a routine seen on 26 of 30 nights (E8). She has her own card and no need for the spare. But note: her clean glass (E3) only shows the decanter was safe when she poured, not when she left. She could still have poisoned it. The 22:48 entry and the planted card are what count against that.
+Why not Peter. His false log entry (E7) is explained by the cognac swap. He entered at 22:31, before Marianne poured a clean glass.
+Why not Selma. She was with Viktor on the terrace from about 22:40 to 23:00 and has no card for the study.
+
+What remains uncertain. Nobody saw Jonas enter the study. The card handover is Peter's belief. The case is an inference to the best explanation, not a proof.</div>
+      <h3>Discussion prompts</h3>
+      <p><span class="k-hyp">Abduction.</span> Which explanation did you reach for first, and why was it attractive? What made you give it up, or keep it?</p>
+      <p><span class="k-pred">Deduction.</span> What exactly follows from Marianne's clean glass? Which premises did the conclusion depend on?</p>
+      <p><span class="k-test">Induction.</span> How much weight can 30 nights of logs carry? When would a routine be a poor guide to one night?</p>
+      <p>The planted card. Which teams changed their minds when it appeared, and which asked what else would have to be true?</p>
+      <p>Your own project. What is your surprising fact? What would follow if your explanation holds? Which data could show you are wrong?</p>
+      <h3>Assessment rubric (0 to 2 points each)</h3>
+      <p>1. The explanation accounts for the surprising fact. 2. Predictions follow from the explanation and could have failed. 3. Evidence is tested against predictions, and the limits of inductive steps are acknowledged. 4. At least one rival explanation is considered, with evidence that discriminates between them. 5. Uncertainty is stated honestly and confidence matches the evidence. Naming the right person earns no points by itself.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const BRIDGE_TITLES = { BC_ABDUCT:"More than one explanation (abduction)", BC_VALID:"Valid is not the same as sound (deduction)", BC_INDUCT:"Thirty nights, one pattern (induction)", BC_CONFIRM:"Evidence that fits too well (the planted card)" };
+let subs = [];
+
+let retests = [], indivs = [];
+const partsBuf = {};
+function assembleParts(list){
+  const out = [];
+  for (const s of list){
+    if (s && s.kind === "part"){ (partsBuf[s.partId] = partsBuf[s.partId] || {})[s.index] = s; continue; }
+    out.push(s);
+  }
+  for (const [id, parts] of Object.entries(partsBuf)){
+    const any = Object.values(parts)[0];
+    if (Object.keys(parts).length < any.total) continue;
+    try { out.push(JSON.parse(Array.from({ length:any.total }, (_, i) => parts[i].data).join(""))); } catch(e){ unreadable++; }
+    delete partsBuf[id];
+  }
+  return out;
+}
+function add(list){
+  list = assembleParts(list);
+  let n = 0;
+  for (const s of list){
+    if (!s || s.game !== "nightcap") continue;
+    if (s.kind === "indiv"){
+      const i = indivs.findIndex(x => x.teamCode === s.teamCode && x.member === s.member && x.phase === s.phase);
+      if (i >= 0){ if ((s.submittedAt || "") >= (indivs[i].submittedAt || "")) indivs[i] = s; } else indivs.push(s);
+      n++; continue;
+    }
+    if (s.kind === "retest"){ if (!retests.some(x => x.submittedAt === s.submittedAt && JSON.stringify(x.retest) === JSON.stringify(s.retest))) retests.push(s); n++; continue; }
+    if (!s.team) continue;
+    let cur = subs.find(x => x.team === s.team);
+    if (s.kind === "post" || s.kind === "trace"){
+      if (!cur){ cur = { team:s.team, placeholder:true, researchConsent:s.researchConsent, mode:s.mode, model:s.model }; subs.push(cur); }
+      if (s.kind === "post") cur.post = s.post;
+      else { cur.events = s.events; cur.chats = s.chats; if (s.trimmed) cur.traceTrimmed = s.trimmed; }
+      n++; continue;
+    }
+    const keep = cur ? { post:cur.post, events:cur.events, chats:cur.chats, traceTrimmed:cur.traceTrimmed } : {};
+    if (cur){ for (const k of Object.keys(cur)) delete cur[k]; Object.assign(cur, s); }
+    else { cur = s; subs.push(s); }
+    for (const [k, v] of Object.entries(keep)) if (v && !cur[k]) cur[k] = v;
+    n++;
+  }
+  const teams = subs.filter(s => !s.placeholder).length;
+  const waiting = Object.keys(partsBuf).length;
+  document.getElementById("msg").textContent = `${n} row${n===1?"":"s"} added. ${teams} team${teams===1?"":"s"}${indivs.length ? `, ${new Set(indivs.map(x => x.teamCode + "#" + x.member)).size} students with individual exercises` : ""}${retests.length ? ` and ${retests.length} individual follow-up${retests.length===1?"":"s"}` : ""} in total.`
+    + (unreadable ? ` ${unreadable} row${unreadable===1?" was":"s were"} cut off or unreadable and could not be used; load those teams' files instead.` : "")
+    + (waiting ? ` ${waiting} long submission${waiting===1?" is":"s are"} still missing a part.` : "");
+  unreadable = 0;
+  show();
+}
+let unreadable = 0;
+function fromText(t){
+  const out = [];
+  try { const j = JSON.parse(t); (Array.isArray(j) ? j : [j]).forEach(x => out.push(x)); return out; } catch(e){}
+  const re = /\{"game":"nightcap"/g; let m;
+  const starts = []; while ((m = re.exec(t))) starts.push(m.index);
+  for (const st of starts){
+    let depth = 0, inStr = false, closed = false;
+    for (let i = st; i < t.length; i++){
+      const ch = t[i];
+      if (inStr){ if (ch === "\\") i++; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true; else if (ch === "{") depth++; else if (ch === "}" && --depth === 0){ closed = true; try { out.push(JSON.parse(t.slice(st, i+1))); } catch(e){ unreadable++; } break; }
+    }
+    if (!closed) unreadable++;   // no closing brace: the text was cut off
+  }
+  return out;
+}
+function parseCSV(text){
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"'){ if (text[i+1] === '"'){ cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ","){ row.push(cell); cell = ""; }
+    else if (ch === "\n"){ row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+
+document.getElementById("files").onchange = async e => {
+  const list = [];
+  for (const f of e.target.files) list.push(...fromText(await f.text()));
+  add(list);
+};
+document.getElementById("pastebtn").onclick = () => { add(fromText(document.getElementById("paste").value)); document.getElementById("paste").value = ""; };
+function sheetUrls(url){
+  // Accept a normal sharing link as well as a "Publish to web" CSV link.
+  const m = url.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m){
+    const gid = (url.match(/[#&?]gid=(\d+)/) || [])[1];
+    return [`https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv${gid ? "&gid=" + gid : ""}`,
+            `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv${gid ? "&gid=" + gid : ""}`];
+  }
+  if (/\/pubhtml/.test(url)) return [url.replace("/pubhtml", "/pub").replace(/([?&])output=\w+/, "$1").replace(/[?&]$/, "") + (url.includes("?") ? "&" : "?") + "output=csv"];
+  return [url];
+}
+document.getElementById("csvbtn").onclick = async () => {
+  const url = document.getElementById("csv").value.trim(), msg = document.getElementById("msg");
+  if (!url) return;
+  msg.textContent = "Loading the sheet...";
+  let lastErr = "";
+  let best = null;
+  for (const u of sheetUrls(url)){
+    unreadable = 0;
+    try {
+      const r = await fetch(u);
+      const t = await r.text();
+      if (!r.ok){ lastErr = "Google answered with error " + r.status + ". Check that the sheet is shared with anyone who has the link."; continue; }
+      if (/^\s*<(!doctype|html)/i.test(t)){ lastErr = "The link returned a web page instead of data. Share the sheet with anyone who has the link, or use File, Share, Publish to web, CSV."; continue; }
+      const list = [];
+      for (const row of parseCSV(t)) for (const cell of row) if (cell.trim().startsWith('{"game":"nightcap"')) list.push(...fromText(cell));
+      if (!list.length){ lastErr = "The sheet loaded, but it contains no game submissions."; continue; }
+      // The two export routes can differ, for example if one shortens long cells: keep the one with more complete rows.
+      const bad = unreadable; unreadable = 0;
+      if (!best || list.length > best.list.length || (list.length === best.list.length && bad < best.bad)) best = { list, bad };
+    } catch(e){ lastErr = "The sheet could not be loaded (" + e.message + "). If you are using the dashboard link inside Claude, open dashboard.html from GitHub or your own computer instead: the Claude page cannot fetch from Google."; }
+  }
+  if (best){ unreadable = best.bad; add(best.list); return; }
+  msg.textContent = lastErr;
+};
+document.getElementById("reveal").onclick = e => { const s = document.getElementById("sol"); s.hidden = !s.hidden; e.target.textContent = s.hidden ? "Show" : "Hide"; };
+
+function exBlock(r, label){
+  const a = r.answers || {};
+  return `<div><h3>${label} (form ${esc(r.form)}, classification ${r.score}/${r.of})</h3>
+    <p class="small muted">${esc(r.fact)}</p>
+    <p><b>Explanation.</b> ${esc(a.explanation)}</p>
+    <p><b>Predictions.</b> ${esc(a.prediction1)}<br>${esc(a.prediction2)}</p>
+    <p><b>Rival.</b> ${esc(a.rival)}</p>
+    <p><b>Telling them apart.</b> ${esc(a.discriminating)}</p></div>`;
+}
+function exSection(vis){
+  const both = vis.filter(s => s.pre && s.post && !s.pre.skipped && !s.post.skipped);
+  const mean = k => both.length ? (both.reduce((a, s) => a + s[k].score, 0) / both.length).toFixed(2) : "none";
+  const withEx = vis.filter(s => s.pre || s.post);
+  if (!withEx.length) return "";
+  return `<section class="panel"><h2>Exercises before and after</h2>
+    <div class="grid">
+      <div><div class="stat">${both.length}</div><span class="muted">teams with both exercises</span></div>
+      <div><div class="stat">${mean("pre")}</div><span class="muted">mean classification before (of ${both[0]?.pre.of ?? 6})</span></div>
+      <div><div class="stat">${mean("post")}</div><span class="muted">mean classification after (of ${both[0]?.post.of ?? 6})</span></div>
+    </div>
+    <p class="small muted">The written answers need coding. Use the export for blind coding and score each answer from 0 to 2: <b>explanation</b>, 2 if it names actors and a mechanism that produces the outcome, 1 if it names only a factor or motive, 0 if it restates the fact; <b>predictions</b>, 2 if both follow from the explanation and could turn out false, 1 if one does, 0 if none; <b>rival</b>, 2 for a genuine rival with an observation that distinguishes the two by the traces their mechanisms leave (who, when, where or why), also when the answer notes that both may contribute; 1 for a rival where the observation only checks whether each cause occurred, or does not distinguish them; 0 for no rival.</p>
+    ${withEx.map(s => `<details><summary>${esc(s.team)}: ${s.pre ? s.pre.score + "/" + s.pre.of : "no warm-up"} before, ${s.post ? s.post.score + "/" + s.post.of : "no follow-up"} after</summary><div class="grid">${["pre","post"].map(k => s[k] ? exBlock(s[k], k==="pre" ? "Before" : "After") : "").join("")}</div></details>`).join("")}
+  </section>`;
+}
+const csvCell = v => { const s = String(v ?? ""); return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function dlFile(name, text){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + text], { type:"text/csv" }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById("export").onclick = () => {
+  const rows = [], key = [], msg = document.getElementById("msg");
+  const sources = [...subs.filter(x => !x.placeholder && x.researchConsent === "yes").flatMap(s => ["pre","post"].map(k => [s, k, s[k]])),
+                   ...indivs.filter(x => x.researchConsent === "yes").map(x => [{ ...(subs.find(s => s.teamCode === x.teamCode) || {}), ...x, team:(subs.find(s => s.teamCode === x.teamCode) || {}).team }, x.phase === "pre" ? "ipre" : "ipost", x.ex]),
+                   ...retests.filter(x => x.researchConsent === "yes").map(x => [x, "retest", x.retest])];
+  for (const [s, k, r] of sources){
+    if (!r || r.skipped) continue;
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    rows.push([code, r.fact, r.answers.explanation, r.answers.prediction1, r.answers.prediction2, r.answers.rival, r.answers.discriminating, "", "", ""]);
+    key.push([code, s.team || "", s.teamCode || "", s.member || "", s.lang || r.lang || "en", k === "pre" ? "before (team)" : k === "post" ? "after (team)" : k === "ipre" ? "before (individual)" : k === "ipost" ? "after (individual)" : "retest (individual)", r.form, s.mode === "ai" ? "AI" : s.mode ? "scripted" : "", s.model || "", s.arm || "", r.score, r.of]);
+  }
+  if (!rows.length){ msg.textContent = "There are no exercises from teams or individuals that agreed to research use."; return; }
+  for (let i = rows.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [rows[i], rows[j]] = [rows[j], rows[i]]; }
+  const toCsv = t => t.map(r => r.map(csvCell).join(",")).join("\r\n");
+  dlFile("nightcap-coding.csv", toCsv([["code","surprising_fact","explanation","prediction_1","prediction_2","rival","discriminating_observation","score_explanation","score_predictions","score_rival"], ...rows]));
+  setTimeout(() => dlFile("nightcap-key.csv", toCsv([["code","team","team_code","member","language","phase","form","mode","model","arm","classification_score","classification_of"], ...key])), 500);
+  msg.textContent = `Exported ${rows.length} answers from teams and individuals that agreed to research use. Give the coding file to the coders and keep the key file apart until coding is finished.`;
+};
+document.getElementById("onlyconsent").onchange = () => show();
+
+// ---- individual exercises answered on students' phones
+function membersOf(code){ return indivs.filter(x => x.teamCode && x.teamCode === code); }
+function indivSection(){
+  const only = document.getElementById("onlyconsent").checked;
+  const I = indivs.filter(x => !only || x.researchConsent === "yes");
+  if (!I.length) return "";
+  const key = x => x.teamCode + "#" + x.member;
+  const pre = I.filter(x => x.phase === "pre"), post = I.filter(x => x.phase === "post");
+  const postBy = Object.fromEntries(post.map(x => [key(x), x]));
+  const pairs = pre.filter(x => postBy[key(x)] && !x.ex.skipped && !postBy[key(x)].ex.skipped).map(x => [x, postBy[key(x)]]);
+  const mean = a => a.length ? (a.reduce((s, v) => s + v, 0) / a.length).toFixed(2) : "none";
+  const codes = [...new Set(I.map(x => x.teamCode))];
+  return `<section class="panel"><h2>Individual exercises (phones)</h2>
+    <div class="grid">
+      <div><div class="stat">${pre.length}</div><span class="muted">students did the warm-up</span></div>
+      <div><div class="stat">${post.length}</div><span class="muted">students did the follow-up</span></div>
+      <div><div class="stat">${pairs.length}</div><span class="muted">students with both</span></div>
+      <div><div class="stat">${mean(pairs.map(p => p[0].ex.score))}</div><span class="muted">mean classification before, students with both (of 6)</span></div>
+      <div><div class="stat">${mean(pairs.map(p => p[1].ex.score))}</div><span class="muted">mean classification after, same students (of 6)</span></div>
+    </div>
+    <p class="small muted">Code the written answers blind with the export and the rubric above.</p>
+    ${codes.map(c => { const team = subs.find(s => s.teamCode === c), M = I.filter(x => x.teamCode === c);
+      const members = [...new Set(M.map(x => x.member))].sort((a, b) => a - b);
+      return `<details><summary>${esc(team ? team.team : "Team not loaded")} (code ${esc(c)}): ${members.length} member${members.length===1?"":"s"}</summary>
+        ${members.map(m => { const b = M.find(x => x.member === m && x.phase === "pre"), a = M.find(x => x.member === m && x.phase === "post");
+          return `<h3>Member ${m}${(b || a)?.researchConsent === "no" ? " (no research consent)" : ""}</h3><div class="grid">${b ? exBlock(b.ex, "Before") : `<p class="muted">No warm-up.</p>`}${a ? exBlock(a.ex, "After") : `<p class="muted">No follow-up.</p>`}</div>`; }).join("")}</details>`; }).join("")}
+  </section>`;
+}
+
+function retestSection(){
+  const only = document.getElementById("onlyconsent").checked;
+  const R = retests.filter(r => !only || r.researchConsent === "yes");
+  if (!R.length) return "";
+  const m = (R.reduce((a, r) => a + r.retest.score, 0) / R.length).toFixed(2);
+  return `<section class="panel"><h2>Individual follow-up (retest)</h2>
+    <div class="grid"><div><div class="stat">${R.length}</div><span class="muted">individual answers</span></div>
+    <div><div class="stat">${m}</div><span class="muted">mean classification (of ${R[0].retest.of})</span></div></div>
+    ${R.map(r => `<details><summary>${esc(r.teamCode ? "Team " + r.teamCode + (r.member ? ", member " + r.member : "") : (r.team || "No team given"))} (${r.lang==="da" ? "Danish" : "English"}): ${r.retest.score}/${r.retest.of}</summary>${exBlock(r.retest, "Follow-up")}</details>`).join("")}</section>`;
+}
+document.getElementById("dataset").onclick = () => {
+  const msg = document.getElementById("msg");
+  const T = subs.filter(s => !s.placeholder && s.researchConsent === "yes");
+  if (!T.length && !retests.length && !indivs.length){ msg.textContent = "There is no data from teams that agreed to research use."; return; }
+  const cols = ["team","language","cohort","section","case_version","team_size","project_group_size","constellation","absent_members","arm","arm_assigned_by","mode","model","model_load_seconds","speed_test_seconds","speed_verdict","speed_choice","gpu_vendor","gpu_f16","ai_mean_seconds","ai_switched_off","minutes","accused","correct_accused","confidence",
+    "hypotheses","predictions","tests","hypotheses_rejected","discriminating_predictions","tests_with_pattern","bridge_cards_answered","event_released","event_minute",
+    "docs_read","questions","questions_matching_topic","ai_replies","ai_fallbacks","ai_regenerations","guide_seconds","first_hypothesis_seconds",
+    "pre_form","pre_score","pre_of","pre_abduction","pre_deduction","pre_induction","pre_seconds",
+    "post_form","post_score","post_of","post_abduction","post_deduction","post_induction","post_seconds",
+    "exp_distinguish","exp_hypotheses","exp_characters"];
+  const rows = T.map(s => { const M = s.metrics || {}, L = s.log || [], P = s.pre || {}, Q = s.post || {};
+    return [s.team, s.lang || "en", s.cohort, s.section, s.caseVersion, s.teamSize, s.projectGroupSize, s.constellation, s.constellation === "project" && s.projectGroupSize ? s.projectGroupSize - s.teamSize : "", s.arm, s.armBy, s.mode, s.model, s.modelLoad?.seconds, s.speedTest?.seconds, s.speedTest?.verdict, s.speedTest?.choseScripted ? "scripted" : s.speedTest?.switchedFrom ? "smaller" : s.speedTest?.continuedAnyway ? "continued" : "", s.gpu?.vendor, s.gpu?.f16 ? 1 : 0, M.aiMeanSeconds, (s.events || []).some(e => e[1] === "ai-off") ? 1 : 0, s.minutes, s.accused, s.accused === "Jonas Brink" ? 1 : 0, s.confidence,
+      s.counts?.h, s.counts?.p, s.counts?.t, L.filter(e => e.status === "rejected").length, L.filter(e => e.disc).length, L.filter(e => e.pattern).length,
+      Object.keys(s.bridge || {}).length, s.event ? 1 : 0, M.eventMinute, M.docsRead, M.questions, M.questionsMatchingTopic, M.aiReplies, M.aiFallbacks, M.aiRegenerations,
+      M.guideSeconds, M.firstHypothesisSeconds,
+      P.form, P.score, P.of, P.byType?.abduction, P.byType?.deduction, P.byType?.induction, P.seconds,
+      Q.form, Q.score, Q.of, Q.byType?.abduction, Q.byType?.deduction, Q.byType?.induction, Q.seconds,
+      Q.experience?.distinguish, Q.experience?.hypotheses, Q.experience?.characters]; });
+  const toCsv = t => t.map(r => r.map(csvCell).join(",")).join("\r\n");
+  dlFile("nightcap-teams.csv", toCsv([cols, ...rows]));
+  // One row per student who agreed, with warm-up, follow-up and retest side by side, plus their team's conditions.
+  const I = indivs.filter(x => x.researchConsent === "yes");
+  const sKeys = [...new Set(I.map(x => x.teamCode + "#" + x.member))];
+  const scols = ["team_code","team","member","language","cohort","section","arm","mode","team_size","constellation","team_research_consent",
+    "pre_form","pre_score","pre_of","pre_abduction","pre_deduction","pre_induction","pre_seconds",
+    "post_form","post_score","post_of","post_abduction","post_deduction","post_induction","post_seconds",
+    "exp_distinguish","exp_hypotheses","exp_characters","retest_form","retest_score","retest_of"];
+  const srows = sKeys.map(k => {
+    const [code, mem] = k.split("#"), P = (I.find(x => x.teamCode === code && String(x.member) === mem && x.phase === "pre") || {}).ex || {},
+          Q = (I.find(x => x.teamCode === code && String(x.member) === mem && x.phase === "post") || {}).ex || {},
+          any = I.find(x => x.teamCode === code && String(x.member) === mem) || {}, tm = subs.find(s => s.teamCode === code) || {},
+          R = (retests.find(x => x.teamCode === code && String(x.member) === mem && x.researchConsent === "yes") || {}).retest || {};
+    return [code, tm.team, mem, any.lang, any.cohort, tm.section, tm.arm, tm.mode, tm.teamSize, tm.constellation, tm.researchConsent,
+      P.form, P.score, P.of, P.byType?.abduction, P.byType?.deduction, P.byType?.induction, P.seconds,
+      Q.form, Q.score, Q.of, Q.byType?.abduction, Q.byType?.deduction, Q.byType?.induction, Q.seconds,
+      Q.experience?.distinguish, Q.experience?.hypotheses, Q.experience?.characters, R.form, R.score, R.of];
+  });
+  if (srows.length) setTimeout(() => dlFile("nightcap-students.csv", toCsv([scols, ...srows])), 1000);
+  const full = { exported:new Date().toISOString(), note:"Teams and individuals that agreed to research use only.",
+                 teams:T, individuals:I, retests:retests.filter(r => r.researchConsent === "yes") };
+  setTimeout(() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(full)], { type:"application/json" })); a.download = "nightcap-research-data.json"; document.body.appendChild(a); a.click(); a.remove(); }, 500);
+  msg.textContent = `Exported ${T.length} team${T.length===1?"":"s"} and ${srows.length} student${srows.length===1?"":"s"}: a table with one row per team, a table with one row per student, and a full data file with logs, interviews and event traces.`;
+};
+
+function show(){
+  const out = document.getElementById("out");
+  const vis = subs.filter(s => !s.placeholder && (!document.getElementById("onlyconsent").checked || s.researchConsent === "yes"));
+  if (!vis.length){ out.innerHTML = indivSection() + retestSection(); return; }
+  const N = vis.length;
+  const acc = {}; vis.forEach(s => acc[s.accused] = (acc[s.accused]||0) + 1);
+  const max = Math.max(...Object.values(acc));
+  const med = k => { const v = vis.map(s => s.counts?.[k] || 0).sort((a,b)=>a-b); return v[Math.floor((v.length-1)/2)]; };
+  const rejected = vis.filter(s => (s.log||[]).some(e => e.type==="hyp" && e.status==="rejected")).length;
+  const discr = vis.filter(s => (s.log||[]).some(e => e.disc)).length;
+  const contradicted = vis.filter(s => (s.log||[]).some(e => e.type==="test" && e.outcome==="contradicts")).length;
+  const conf = {}; vis.forEach(s => { conf[s.accused] = conf[s.accused] || []; conf[s.accused].push(s.confidence); });
+
+  out.innerHTML = `
+  <section class="panel">
+    <h2>Verdicts</h2>
+    ${Object.entries(acc).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<div class="bar"><span>${esc(k)}</span><div class="fill" style="width:${v/max*100}%"></div><b>${v}</b></div>`).join("")}
+    <p class="small muted">Teams by language: ${vis.filter(s => s.lang==="da").length} Danish, ${vis.filter(s => s.lang!=="da").length} English. Average confidence by verdict: ${Object.entries(conf).map(([k,v]) => `${esc(k)} ${(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1)}`).join("; ")}</p>
+  </section>
+  <section class="panel">
+    <h2>How teams reasoned</h2>
+    <div class="grid">
+      <div><div class="stat">${N}</div><span class="muted">teams</span></div>
+      <div><div class="stat k-hyp">${med("h")}</div><span class="muted">hypotheses (median)</span></div>
+      <div><div class="stat k-pred">${med("p")}</div><span class="muted">predictions (median)</span></div>
+      <div><div class="stat k-test">${med("t")}</div><span class="muted">tests (median)</span></div>
+      <div><div class="stat">${rejected}</div><span class="muted">teams rejected a hypothesis</span></div>
+      <div><div class="stat">${contradicted}</div><span class="muted">teams recorded a contradicting test</span></div>
+      <div><div class="stat">${discr}</div><span class="muted">teams made a prediction that tells hypotheses apart</span></div>
+    </div>
+  </section>
+  ${Object.entries(BRIDGE_TITLES).map(([id, title]) => {
+    const ans = vis.filter(s => s.bridge?.[id]);
+    return `<section class="panel"><h2>${esc(title)}</h2>${ans.length ? `<ul class="answers">${ans.map(s => `<li><b>${esc(s.team)}</b> ${esc(s.bridge[id].answer)}</li>`).join("")}</ul>` : `<p class="muted">No team answered this card.</p>`}</section>`;
+  }).join("")}
+  ${exSection(vis)}
+  ${indivSection()}
+  ${retestSection()}
+  <section class="panel">
+    <h2>Teams</h2>
+    <p class="small muted">Select a team to read its argument and log.</p>
+    <div class="table-wrap"><table><thead><tr><th>Team</th><th>Language</th><th>Mode</th><th>Arm</th><th>Size</th><th>Group</th><th>Phones</th><th>Research</th><th>Verdict</th><th>Conf.</th><th>H</th><th>P</th><th>T</th><th>Rejected</th><th>Minutes</th></tr></thead><tbody>
+    ${vis.map((s,i) => `<tr class="team" data-i="${i}" tabindex="0"><td>${esc(s.team)}</td><td>${s.lang==="da" ? "Danish" : "English"}</td><td>${s.mode==="ai" ? "AI" : "Scripted"}</td><td>${esc(s.arm || "")}</td><td>${s.teamSize || ""}</td><td>${s.constellation === "temporary" ? "temporary" : s.projectGroupSize ? (s.projectGroupSize === 1 ? "solo" : s.teamSize + " of " + s.projectGroupSize) : ""}</td><td>${s.teamCode ? `${membersOf(s.teamCode).filter(x => x.phase==="pre").length}/${membersOf(s.teamCode).filter(x => x.phase==="post").length}` : ""}</td><td>${s.researchConsent==="yes" ? "Yes" : s.researchConsent==="no" ? "No" : "?"}</td><td>${esc(s.accused)}</td><td>${s.confidence}</td><td>${s.counts?.h||0}</td><td>${s.counts?.p||0}</td><td>${s.counts?.t||0}</td><td>${(s.log||[]).filter(e=>e.status==="rejected").length}</td><td>${s.minutes}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div id="detail"></div>
+  </section>`;
+  out.querySelectorAll("tr.team").forEach(tr => { tr.onclick = () => detail(vis[tr.dataset.i]); tr.onkeydown = e => { if (e.key==="Enter") detail(vis[tr.dataset.i]); }; });
+}
+function detail(s){
+  const A = s.argument || {};
+  const tag = e => (e.type==="hyp"?"H":e.type==="pred"?"P":"T") + e.n;
+  const byId = Object.fromEntries((s.log||[]).map(e => [e.id, e]));
+  const para = (label, v) => `<p><b>${label}</b> ${v ? esc(v) : '<span class="muted">(empty)</span>'}</p>`;
+  const checks = dataChecks(s);
+  const BR = { BC_ABDUCT:"More than one explanation", BC_VALID:"Valid is not the same as sound", BC_INDUCT:"Thirty nights, one pattern", BC_CONFIRM:"Evidence that fits too well" };
+  document.getElementById("detail").innerHTML = `<h3>${esc(s.team)}: ${esc(s.accused)} (confidence ${s.confidence})</h3>
+    <p class="small ${checks.length ? "warn" : "muted"}">${checks.length ? "Data check: " + checks.map(esc).join(" ") : "Data check: everything this team submitted was received in full."}</p>
+    <h3>Final argument</h3>
+    ${para("Explanation.", A.hypothesis)}${para("What follows.", A.deduction)}${para("Testing.", A.induction)}${para("Rivals.", A.alternatives)}${para("Uncertainty.", A.uncertainty)}
+    <h3>Inquiry log (${(s.log||[]).length} entries)</h3>
+    ${(s.log||[]).map(e => `<div class="entry ${e.type}"><b>${tag(e)}</b>${e.status && e.status!=="open" ? ` <span class="small">[${esc(e.status)}]</span>` : ""}${e.outcome ? ` <span class="small">[${esc(e.outcome)}]</span>` : ""}${e.disc ? ` <span class="small">[distinguishes]</span>` : ""}
+      ${e.link && byId[e.link] ? `<div class="small muted">${e.type==="pred" ? "Follows from" : "Tests"} ${tag(byId[e.link])}: ${esc(byId[e.link].text)}</div>` : ""}
+      <div>${esc(e.text)}</div>${(e.evidence||[]).length ? `<div class="small muted">Evidence: ${esc(e.evidence.join(", "))}</div>` : ""}</div>`).join("") || `<p class="muted">Empty.</p>`}
+    <h3>Bridge cards</h3>
+    ${Object.keys(BR).map(k => s.bridge?.[k] ? `<p><b>${BR[k]}.</b> ${esc(s.bridge[k].answer)}</p>` : `<p class="muted small">${BR[k]}: not shown to this team or not answered.</p>`).join("")}
+    <h3>Exercises</h3>
+    ${s.pre || s.post ? `<div class="grid">${s.pre ? exBlock(s.pre, "Before (team)") : ""}${s.post ? exBlock(s.post, "After (team)") : ""}</div>` : ""}
+    ${s.teamCode && membersOf(s.teamCode).length ? [...new Set(membersOf(s.teamCode).map(x => x.member))].sort((a,b) => a-b).map(m => { const b = membersOf(s.teamCode).find(x => x.member===m && x.phase==="pre"), a = membersOf(s.teamCode).find(x => x.member===m && x.phase==="post");
+      return `<p class="small"><b>Member ${m}.</b> Before ${b ? b.ex.score + "/" + b.ex.of : "missing"}, after ${a ? a.ex.score + "/" + a.ex.of : "missing"}.</p>`; }).join("") : (!s.pre && !s.post ? `<p class="muted">None received.</p>` : "")}
+    ${s.post?.experience ? `<p class="small">Ratings (1 to 5): understanding the three types ${s.post.experience.distinguish}, writing testable hypotheses ${s.post.experience.hypotheses}, convincing characters ${s.post.experience.characters}.${s.post.comment ? " Comment: " + esc(s.post.comment) : ""}</p>` : ""}
+    <h3>Evidence and statements found</h3>
+    <p class="small">Files read: ${esc((s.docs||[]).join(", ") || "none")}. Statements: ${esc((s.testimonies||[]).join(", ") || "none")}. Event released: ${s.event ? "yes" : "no"}.</p>
+    ${(s.emergent||[]).length ? `<p class="small">Unverified details: ${s.emergent.map(e => esc(e.who + ": " + e.text)).join("; ")}</p>` : ""}
+    ${s.metrics ? `<h3>Process</h3><p class="small">Guide ${s.metrics.guideSeconds}s. First hypothesis after ${s.metrics.firstHypothesisSeconds ?? "?"}s. ${s.metrics.docsRead} files read. ${s.metrics.questions} questions, ${s.metrics.questionsMatchingTopic} on a known topic${s.mode==="ai" ? `, ${s.metrics.aiFallbacks} AI fallbacks, ${s.metrics.aiRegenerations} regenerations, ${s.metrics.aiTrimmed ?? 0} answers shortened to complete sentences, about ${s.metrics.aiMeanSeconds ?? "?"}s per AI answer` : ""}${s.speedTest ? `. Speed test: ${s.speedTest.seconds}s expected (${esc(s.speedTest.verdict)})` : ""}.</p>` : ""}
+    ${s.chats ? `<h3>Interviews</h3>${Object.entries(s.chats).map(([who, list]) => `<details><summary>${esc(who)} (${list.filter(m => m.role==="user").length} questions)</summary>${list.map(m => `<p class="small"><b>${m.role==="user" ? "Q" : "A"}</b>${m.role!=="user" && m.source ? ` <span class="muted">[${esc(m.source)}${m.topic ? ", " + esc(m.topic) : ""}]</span>` : ""} ${esc(m.content)}</p>`).join("")}</details>`).join("")}` : ""}`;
+  document.getElementById("detail").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+// Lists what is missing or was shortened for a team, so gaps are visible rather than silent.
+function dataChecks(s){
+  const out = [];
+  if (!s.chats && !s.events) out.push("The interview transcripts and process trace were not received (they arrive as a separate row; check the sheet or load the team's file).");
+  if (s.traceTrimmed) out.push(`The interview transcripts were shortened before sending (${s.traceTrimmed}), because this version of the game had to fit them into one sheet cell. The team's downloaded file has everything.`);
+  if (s.exerciseMode === "individual"){
+    const M = membersOf(s.teamCode), pre = M.filter(x => x.phase === "pre").length, post = M.filter(x => x.phase === "post").length;
+    if (pre < (s.teamSize || 0)) out.push(`${pre} of ${s.teamSize} members' warm-ups received.`);
+    if (post < (s.teamSize || 0)) out.push(`${post} of ${s.teamSize} members' follow-ups received.`);
+  } else {
+    if (s.pre === null || s.pre === undefined) out.push("No warm-up exercise received.");
+    if (!s.post) out.push("No follow-up exercise received (the team may not have finished it).");
+  }
+  if (s.chats) for (const [who, list] of Object.entries(s.chats)) if (list.some(m => m.role !== "user" && /(\.\.\.|…)$/.test(m.content) && m.content.length <= 163)) { out.push(`Some answers from ${who} end in "...", which suggests they were shortened.`); break; }
+  return out;
+}
+</script>
+</body>
+</html>
